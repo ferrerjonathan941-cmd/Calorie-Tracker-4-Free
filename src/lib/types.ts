@@ -1,0 +1,46 @@
+export interface FoodItem {
+  name: string
+  calories: number
+  protein: number
+  carbs: number
+  fat: number
+  quantity: string
+  category?: string
+}
+
+export interface FoodAnalysis {
+  food_items: FoodItem[]
+  total_calories: number
+  total_protein: number
+  total_carbs: number
+  total_fat: number
+  needsInput?: boolean
+  warnings?: string[]
+}
+
+export interface FoodEntry {
+  id: string
+  image_url: string | null
+  meal_type: string
+  food_items: FoodItem[]
+  total_calories: number
+  total_protein: number
+  total_carbs: number
+  total_fat: number
+  logged_at: string
+  notes?: string | null
+}
+
+export interface SavedMeal {
+  id: string
+  user_id: string
+  name: string
+  meal_type: string
+  food_items: FoodItem[]
+  total_calories: number
+  total_protein: number
+  total_carbs: number
+  total_fat: number
+  use_count: number
+  created_at: string
+}
