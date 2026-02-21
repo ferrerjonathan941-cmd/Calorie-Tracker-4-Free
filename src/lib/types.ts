@@ -31,16 +31,11 @@ export interface FoodEntry {
   notes?: string | null
 }
 
-export interface SavedMeal {
-  id: string
-  user_id: string
-  name: string
-  meal_type: string
-  food_items: FoodItem[]
+export interface DailySummary {
+  date: string
   total_calories: number
   total_protein: number
   total_carbs: number
   total_fat: number
-  use_count: number
-  created_at: string
+  entry_count: number
 }

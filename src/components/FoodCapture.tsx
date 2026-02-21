@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { Camera, Paperclip, Loader2, X, Plus, Trash2, Check, RotateCcw, BookmarkPlus } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Camera, Paperclip, Loader2, X, Plus, Trash2, Check, RotateCcw } from 'lucide-react'
 import { FoodEntry, FoodItem, FoodAnalysis } from '@/lib/types'
 import PortionAdjuster from '@/components/PortionAdjuster'
 import { LiquidButton } from '@/components/ui/liquid-glass-button'
@@ -10,14 +10,14 @@ type Phase = 'input' | 'analyzing' | 'draft'
 
 interface FoodCaptureProps {
   onNewEntry: (entry: FoodEntry) => void
+  onPhaseChange?: (phase: Phase) => void
 }
 
-export default function FoodCapture({ onNewEntry }: FoodCaptureProps) {
+export default function FoodCapture({ onNewEntry, onPhaseChange }: FoodCaptureProps) {
   // Input phase state
-  const [mealType, setMealType] = useState<string>('snack')
+  const mealType = 'snack'
   const [description, setDescription] = useState('')
   const [preview, setPreview] = useState<string | null>(null)
-  const [isRestaurant, setIsRestaurant] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pendingFileRef = useRef<File | null>(null)
   const base64Ref = useRef<string | null>(null)
@@ -25,6 +25,11 @@ export default function FoodCapture({ onNewEntry }: FoodCaptureProps) {
   // Phase state
   const [phase, setPhase] = useState<Phase>('input')
   const [error, setError] = useState<string | null>(null)
+
+  // Notify parent of phase changes
+  useEffect(() => {
+    onPhaseChange?.(phase)
+  }, [phase, onPhaseChange])
 
   // Draft phase state
   const [draftAnalysis, setDraftAnalysis] = useState<FoodAnalysis | null>(null)
@@ -40,10 +45,6 @@ export default function FoodCapture({ onNewEntry }: FoodCaptureProps) {
   const [additionalDescription, setAdditionalDescription] = useState('')
   const [reanalyzing, setReanalyzing] = useState(false)
 
-  // Save meal state
-  const [showSaveMeal, setShowSaveMeal] = useState(false)
-  const [saveMealName, setSaveMealName] = useState('')
-  const [savingMeal, setSavingMeal] = useState(false)
 
   const resetToInput = () => {
     setPhase('input')
@@ -58,8 +59,6 @@ export default function FoodCapture({ onNewEntry }: FoodCaptureProps) {
     setPortionMultiplier(1.0)
     setError(null)
     setAdditionalDescription('')
-    setShowSaveMeal(false)
-    setSaveMealName('')
     pendingFileRef.current = null
     base64Ref.current = null
   }
@@ -74,7 +73,6 @@ export default function FoodCapture({ onNewEntry }: FoodCaptureProps) {
     }
     formData.append('mealType', mealType)
     formData.append('draftMode', 'true')
-    formData.append('isRestaurant', String(isRestaurant))
 
     const desc = extraDescription || description.trim()
     if (desc) {
@@ -198,6 +196,7 @@ export default function FoodCapture({ onNewEntry }: FoodCaptureProps) {
           food_items: draftItems,
           ...totals,
           notes: draftNotes,
+          logged_at: new Date().toISOString(),
         }),
       })
 
@@ -207,81 +206,15 @@ export default function FoodCapture({ onNewEntry }: FoodCaptureProps) {
 
       const entry = await res.json()
       onNewEntry(entry)
-      setShowSaveMeal(true)
       setSaving(false)
+      resetToInput()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setSaving(false)
     }
   }
 
-  const handleSaveMeal = async () => {
-    if (!saveMealName.trim()) return
-    setSavingMeal(true)
-
-    const totals = recalculateTotals()
-
-    try {
-      await fetch('/api/saved-meals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: saveMealName.trim(),
-          meal_type: mealType,
-          food_items: draftItems,
-          ...totals,
-        }),
-      })
-    } catch {
-      // Non-critical — silently fail
-    }
-
-    setSavingMeal(false)
-    resetToInput()
-  }
-
   const totals = recalculateTotals()
-
-  // ─── Save Meal Prompt ───
-  if (showSaveMeal) {
-    return (
-      <div className="fixed inset-0 bg-bg z-[60] flex flex-col pointer-events-auto">
-        <div className="flex-1 overflow-y-auto pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(6rem+env(safe-area-inset-bottom))] px-4 flex items-center justify-center">
-          <div className="w-full max-w-lg">
-            <div className="bg-surface rounded-2xl shadow-sm border border-border p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <BookmarkPlus className="w-5 h-5 text-white" />
-                <h2 className="text-lg font-semibold text-text">Save this meal?</h2>
-              </div>
-              <p className="text-sm text-text-dim mb-3">Save for quick logging next time</p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={saveMealName}
-                  onChange={(e) => setSaveMealName(e.target.value)}
-                  placeholder="Meal name (e.g., Morning oatmeal)"
-                  className="flex-1 px-3 py-2 bg-surface border border-border rounded-xl text-sm text-white placeholder-text-dim focus:outline-none focus:ring-2 focus:ring-white/20"
-                />
-                <button
-                  onClick={handleSaveMeal}
-                  disabled={savingMeal || !saveMealName.trim()}
-                  className="px-4 py-2 text-sm font-medium text-white bg-white/[0.10] border border-white/[0.08] rounded-xl hover:bg-white/[0.16] disabled:opacity-50 transition-all"
-                >
-                  {savingMeal ? 'Saving...' : 'Save'}
-                </button>
-              </div>
-              <button
-                onClick={resetToInput}
-                className="w-full mt-2 py-2 text-sm text-text-dim hover:text-text"
-              >
-                Skip
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   // ─── Draft Phase ───
   if (phase === 'draft') {
@@ -295,6 +228,28 @@ export default function FoodCapture({ onNewEntry }: FoodCaptureProps) {
                 <button onClick={resetToInput} className="p-1.5 text-text-dim hover:text-text rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
+              </div>
+
+              {/* Totals */}
+              <div className="bg-gradient-to-r from-surface-2 to-surface-3 rounded-xl p-3 mb-3">
+                <div className="grid grid-cols-4 gap-2 text-center text-sm">
+                  <div>
+                    <p className="font-bold text-white font-[family-name:var(--font-display)]">{totals.total_calories}</p>
+                    <p className="text-xs text-text-dim">Cal</p>
+                  </div>
+                  <div>
+                    <p className="font-bold text-white font-[family-name:var(--font-display)]">{totals.total_protein}g</p>
+                    <p className="text-xs text-text-dim">Protein</p>
+                  </div>
+                  <div>
+                    <p className="font-bold text-white font-[family-name:var(--font-display)]">{totals.total_carbs}g</p>
+                    <p className="text-xs text-text-dim">Carbs</p>
+                  </div>
+                  <div>
+                    <p className="font-bold text-white font-[family-name:var(--font-display)]">{totals.total_fat}g</p>
+                    <p className="text-xs text-text-dim">Fat</p>
+                  </div>
+                </div>
               </div>
 
               {/* Image thumbnail */}
@@ -340,11 +295,6 @@ export default function FoodCapture({ onNewEntry }: FoodCaptureProps) {
                   </button>
                 </div>
               )}
-
-              {/* Portion adjuster */}
-              <div className="mb-3">
-                <PortionAdjuster currentMultiplier={portionMultiplier} onChange={handlePortionChange} />
-              </div>
 
               {/* Editable food items */}
               <div className="space-y-2 mb-3">
@@ -425,31 +375,14 @@ export default function FoodCapture({ onNewEntry }: FoodCaptureProps) {
                 Add Item
               </button>
 
-              {/* Totals */}
-              <div className="bg-gradient-to-r from-surface-2 to-surface-3 rounded-xl p-3 mb-3">
-                <div className="grid grid-cols-4 gap-2 text-center text-sm">
-                  <div>
-                    <p className="font-bold text-white font-[family-name:var(--font-display)]">{totals.total_calories}</p>
-                    <p className="text-xs text-text-dim">Cal</p>
-                  </div>
-                  <div>
-                    <p className="font-bold text-white font-[family-name:var(--font-display)]">{totals.total_protein}g</p>
-                    <p className="text-xs text-text-dim">Protein</p>
-                  </div>
-                  <div>
-                    <p className="font-bold text-white font-[family-name:var(--font-display)]">{totals.total_carbs}g</p>
-                    <p className="text-xs text-text-dim">Carbs</p>
-                  </div>
-                  <div>
-                    <p className="font-bold text-white font-[family-name:var(--font-display)]">{totals.total_fat}g</p>
-                    <p className="text-xs text-text-dim">Fat</p>
-                  </div>
-                </div>
-              </div>
-
               {error && (
                 <div className="mb-3 bg-white/[0.04] text-white/60 text-sm p-3 rounded-lg">{error}</div>
               )}
+
+              {/* Portion adjuster */}
+              <div className="mb-3 flex justify-center">
+                <PortionAdjuster currentMultiplier={portionMultiplier} onChange={handlePortionChange} />
+              </div>
 
               {/* Action buttons */}
               <div className="flex gap-3">

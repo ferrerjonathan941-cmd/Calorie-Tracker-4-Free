@@ -27,11 +27,12 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Do not run code between createServerClient and supabase.auth.getClaims().
-  // getClaims() validates the JWT locally (no network request) and refreshes
-  // expired tokens, which is faster and more reliable than getUser().
-  const { data } = await supabase.auth.getClaims()
-  const user = data?.claims
+  // Do not run code between createServerClient and supabase.auth.getSession().
+  // getSession() reads the session from cookies and refreshes expired tokens
+  // without making a network request to validate (unlike getUser/getClaims
+  // which hit Supabase's /auth/v1/user endpoint and can fail on cold-start).
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
 
   // Allow public routes
   const publicPaths = ['/login', '/auth/callback']

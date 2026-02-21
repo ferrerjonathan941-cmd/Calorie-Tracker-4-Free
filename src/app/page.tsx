@@ -4,20 +4,21 @@ import Dashboard from './dashboard'
 
 export default async function HomePage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
 
   if (!user) {
     redirect('/login')
   }
 
-  // Fetch today's entries
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  // Fetch recent entries (48h window to cover any timezone offset)
+  const cutoff = new Date()
+  cutoff.setHours(cutoff.getHours() - 48)
 
   const { data: entries } = await supabase
     .from('food_entries')
     .select('*')
-    .gte('logged_at', today.toISOString())
+    .gte('logged_at', cutoff.toISOString())
     .order('logged_at', { ascending: false })
 
   return (

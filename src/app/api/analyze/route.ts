@@ -59,6 +59,15 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 })
         }
 
+        if (!identification.isFood) {
+          // Clean up the uploaded image
+          await supabase.storage.from('food-photos').remove([fileName])
+          return NextResponse.json(
+            { error: identification.notFoodReason || 'This doesn\'t appear to be food. Please take a photo of your meal.' },
+            { status: 400 }
+          )
+        }
+
         isChainRestaurant = identification.isChainRestaurant
         chainName = identification.chainName || undefined
         identifiedItems = identification.items

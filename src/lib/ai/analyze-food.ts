@@ -16,6 +16,8 @@ interface AnalyzeFoodOptions {
 }
 
 interface FoodIdentification {
+  isFood: boolean
+  notFoodReason?: string
   items: string[]
   isChainRestaurant: boolean
   chainName?: string
@@ -44,12 +46,16 @@ export async function identifyFoodItems(
     {
       text: `Identify the food items in this image. Return a JSON object with:
 {
+  "isFood": true/false,
+  "notFoodReason": "brief reason if not food, or null",
   "items": ["item name 1", "item name 2"],
   "isChainRestaurant": true/false,
   "chainName": "chain name or null"
 }
 
 Rules:
+- First determine if the image contains food or beverages. If it does NOT contain any food or drinks, set "isFood" to false, provide a brief friendly reason in "notFoodReason" (e.g. "This looks like a shoe, not food"), and return an empty items array.
+- If the image does contain food, set "isFood" to true and "notFoodReason" to null.
 - List each distinct food item by name (e.g. "Chick-fil-A spicy chicken sandwich", "french fries")
 - If this is from a recognizable chain restaurant (McDonald's, Chick-fil-A, Subway, etc.), set isChainRestaurant to true and provide the chainName
 - If you can see packaging, wrappers, or branding, use that to identify the chain

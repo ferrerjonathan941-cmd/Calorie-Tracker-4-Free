@@ -8,9 +8,10 @@ interface DailyLogProps {
   entries: FoodEntry[]
   onDelete: (id: string) => void
   onEdit: (entry: FoodEntry) => void
+  isToday?: boolean
 }
 
-export default function DailyLog({ entries, onDelete, onEdit }: DailyLogProps) {
+export default function DailyLog({ entries, onDelete, onEdit, isToday = true }: DailyLogProps) {
   const totals = entries.reduce(
     (acc, entry) => ({
       calories: acc.calories + entry.total_calories,
@@ -25,7 +26,7 @@ export default function DailyLog({ entries, onDelete, onEdit }: DailyLogProps) {
     <div className="space-y-4">
       {/* Daily totals */}
       <div className="bg-gradient-to-b from-surface to-surface-2 rounded-2xl shadow-sm border border-border p-4">
-        <h2 className="text-lg font-semibold text-white mb-3 font-[family-name:var(--font-display)]">Today&apos;s Totals</h2>
+        <h2 className="text-lg font-semibold text-white mb-3 font-[family-name:var(--font-display)]">{isToday ? "Today\u2019s Totals" : 'Daily Totals'}</h2>
         <div className="grid grid-cols-4 gap-3">
           <div className="text-center">
             <p className="text-2xl font-bold text-white font-[family-name:var(--font-display)]">{Math.round(totals.calories)}</p>
@@ -49,7 +50,7 @@ export default function DailyLog({ entries, onDelete, onEdit }: DailyLogProps) {
       {/* Entry list */}
       {entries.length === 0 ? (
         <div className="bg-surface rounded-2xl shadow-sm border border-border p-8 text-center">
-          <p className="text-text-dim">No entries yet today. Snap a photo to get started!</p>
+          <p className="text-text-dim">{isToday ? 'No entries yet today. Snap a photo to get started!' : 'No entries for this day.'}</p>
         </div>
       ) : (
         entries.map((entry) => (
@@ -70,9 +71,6 @@ export default function DailyLog({ entries, onDelete, onEdit }: DailyLogProps) {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-white/[0.06] text-white">
-                        {entry.meal_type}
-                      </span>
                       <span className="text-xs text-text-dim">
                         {format(new Date(entry.logged_at), 'h:mm a')}
                       </span>

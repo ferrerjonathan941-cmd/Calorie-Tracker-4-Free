@@ -109,10 +109,27 @@ export default function EditEntryModal({ entry, onSave, onClose }: EditEntryModa
         </div>
 
         <div className="p-4 space-y-4">
-          <PortionAdjuster
-            currentMultiplier={portionMultiplier}
-            onChange={handlePortionChange}
-          />
+          {/* Totals */}
+          <div className="bg-gradient-to-r from-surface-2 to-surface-3 rounded-xl p-3">
+            <div className="grid grid-cols-4 gap-2 text-center text-sm">
+              <div>
+                <p className="font-bold text-white font-[family-name:var(--font-display)]">{totals.total_calories}</p>
+                <p className="text-xs text-text-dim">Cal</p>
+              </div>
+              <div>
+                <p className="font-bold text-white font-[family-name:var(--font-display)]">{totals.total_protein}g</p>
+                <p className="text-xs text-text-dim">Protein</p>
+              </div>
+              <div>
+                <p className="font-bold text-white font-[family-name:var(--font-display)]">{totals.total_carbs}g</p>
+                <p className="text-xs text-text-dim">Carbs</p>
+              </div>
+              <div>
+                <p className="font-bold text-white font-[family-name:var(--font-display)]">{totals.total_fat}g</p>
+                <p className="text-xs text-text-dim">Fat</p>
+              </div>
+            </div>
+          </div>
 
           {items.map((item, index) => (
             <div key={index} className="bg-white/[0.03] border border-border rounded-xl p-3 space-y-2">
@@ -190,31 +207,17 @@ export default function EditEntryModal({ entry, onSave, onClose }: EditEntryModa
             Add Item
           </button>
 
-          {/* Totals */}
-          <div className="bg-gradient-to-r from-surface-2 to-surface-3 rounded-xl p-3">
-            <div className="grid grid-cols-4 gap-2 text-center text-sm">
-              <div>
-                <p className="font-bold text-white font-[family-name:var(--font-display)]">{totals.total_calories}</p>
-                <p className="text-xs text-text-dim">Cal</p>
-              </div>
-              <div>
-                <p className="font-bold text-white font-[family-name:var(--font-display)]">{totals.total_protein}g</p>
-                <p className="text-xs text-text-dim">Protein</p>
-              </div>
-              <div>
-                <p className="font-bold text-white font-[family-name:var(--font-display)]">{totals.total_carbs}g</p>
-                <p className="text-xs text-text-dim">Carbs</p>
-              </div>
-              <div>
-                <p className="font-bold text-white font-[family-name:var(--font-display)]">{totals.total_fat}g</p>
-                <p className="text-xs text-text-dim">Fat</p>
-              </div>
-            </div>
-          </div>
-
           {error && (
             <div className="bg-white/[0.04] text-white/60 text-sm p-3 rounded-lg">{error}</div>
           )}
+
+          {/* Portion adjuster */}
+          <div className="flex justify-center">
+            <PortionAdjuster
+              currentMultiplier={portionMultiplier}
+              onChange={handlePortionChange}
+            />
+          </div>
 
           <div className="flex gap-3">
             <button
