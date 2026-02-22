@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Camera, Paperclip, Loader2, X, Plus, Trash2, Check, RotateCcw } from 'lucide-react'
+import { Camera, Paperclip, Loader2, X, Plus, Trash2, Check, RotateCcw, ArrowUp } from 'lucide-react'
 import { FoodEntry, FoodItem, FoodAnalysis } from '@/lib/types'
 import PortionAdjuster from '@/components/PortionAdjuster'
 import { LiquidButton } from '@/components/ui/liquid-glass-button'
@@ -142,12 +142,13 @@ export default function FoodCapture({ onNewEntry, onPhaseChange }: FoodCapturePr
     reader.readAsDataURL(file)
 
     pendingFileRef.current = file
-    await submitAnalysis(file)
   }
 
-  const handleTextSubmit = () => {
-    if (!description.trim()) return
-    submitAnalysis()
+  const handleSend = () => {
+    const hasImage = !!pendingFileRef.current
+    const hasText = !!description.trim()
+    if (!hasImage && !hasText) return
+    submitAnalysis(pendingFileRef.current || undefined, description.trim() || undefined)
   }
 
   const handleReanalyze = async () => {
@@ -488,9 +489,9 @@ export default function FoodCapture({ onNewEntry, onPhaseChange }: FoodCapturePr
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey && description.trim()) {
+          if (e.key === 'Enter' && !e.shiftKey && (description.trim() || pendingFileRef.current)) {
             e.preventDefault()
-            handleTextSubmit()
+            handleSend()
           }
         }}
         onPaste={(e) => {
@@ -509,9 +510,11 @@ export default function FoodCapture({ onNewEntry, onPhaseChange }: FoodCapturePr
         rows={2}
         className="w-full px-1 py-2 bg-transparent border-none text-base text-white resize-none focus:outline-none transparent-placeholder"
       />
-      {description.trim() && (
+      {(description.trim() || preview) && (
         <p className="text-xs text-text-dim mb-2 px-1">
-          Press Enter to analyze text only, or snap a photo for better accuracy
+          {preview
+            ? 'Add a description (optional) then tap send'
+            : 'Press Enter to send'}
         </p>
       )}
 
@@ -520,7 +523,7 @@ export default function FoodCapture({ onNewEntry, onPhaseChange }: FoodCapturePr
         <div className="mb-3 relative">
           <img src={preview} alt="Food preview" className="w-full h-48 object-cover rounded-xl" />
           <button
-            onClick={() => { setPreview(null); pendingFileRef.current = null }}
+            onClick={() => { setPreview(null); pendingFileRef.current = null; base64Ref.current = null }}
             className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full"
           >
             <X className="w-4 h-4" />
@@ -546,19 +549,30 @@ export default function FoodCapture({ onNewEntry, onPhaseChange }: FoodCapturePr
         >
           <Paperclip className="w-4 h-4" />
         </button>
-        <LiquidButton
-          size="icon"
-          onClick={() => {
-            if (fileInputRef.current) {
-              fileInputRef.current.capture = 'environment'
-              fileInputRef.current.click()
-            }
-          }}
-          className="h-14 w-14 rounded-full text-white [&_svg]:!size-7"
-          title="Take photo"
-        >
-          <Camera className="w-7 h-7" />
-        </LiquidButton>
+        {description.trim() || preview ? (
+          <LiquidButton
+            size="icon"
+            onClick={handleSend}
+            className="h-14 w-14 rounded-full text-white [&_svg]:!size-7"
+            title="Send"
+          >
+            <ArrowUp className="w-7 h-7" />
+          </LiquidButton>
+        ) : (
+          <LiquidButton
+            size="icon"
+            onClick={() => {
+              if (fileInputRef.current) {
+                fileInputRef.current.capture = 'environment'
+                fileInputRef.current.click()
+              }
+            }}
+            className="h-14 w-14 rounded-full text-white [&_svg]:!size-7"
+            title="Take photo"
+          >
+            <Camera className="w-7 h-7" />
+          </LiquidButton>
+        )}
       </div>
 
       <input
