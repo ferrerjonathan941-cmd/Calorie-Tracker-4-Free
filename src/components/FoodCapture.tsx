@@ -45,6 +45,26 @@ export default function FoodCapture({ onNewEntry, onPhaseChange }: FoodCapturePr
   const [additionalDescription, setAdditionalDescription] = useState('')
   const [reanalyzing, setReanalyzing] = useState(false)
 
+  // Global paste handler: allow pasting images anywhere during input phase
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      if (phase !== 'input') return
+      const items = e.clipboardData?.items
+      if (!items) return
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault()
+          const file = item.getAsFile()
+          if (file) handleFileSelect(file)
+          return
+        }
+      }
+    }
+    document.addEventListener('paste', handleGlobalPaste)
+    return () => document.removeEventListener('paste', handleGlobalPaste)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase])
+
 
   const resetToInput = () => {
     setPhase('input')
@@ -257,14 +277,24 @@ export default function FoodCapture({ onNewEntry, onPhaseChange }: FoodCapturePr
                 <img src={preview} alt="Food" className="w-full h-32 object-cover rounded-xl mb-3" />
               )}
 
-              {/* Validation warnings */}
+              {/* Validation warnings & corrections */}
               {warnings.length > 0 && (
                 <div className="mb-3 space-y-1">
-                  {warnings.map((w, i) => (
-                    <div key={i} className="bg-white/[0.04] border border-white/[0.08] text-white/60 text-xs p-2 rounded-lg">
-                      {w}
-                    </div>
-                  ))}
+                  {warnings.map((w, i) => {
+                    const isCorrection = w.startsWith('[Auto-corrected]')
+                    return (
+                      <div
+                        key={i}
+                        className={`text-xs p-2 rounded-lg ${
+                          isCorrection
+                            ? 'bg-blue-500/10 border border-blue-400/20 text-blue-300/80'
+                            : 'bg-white/[0.04] border border-white/[0.08] text-white/60'
+                        }`}
+                      >
+                        {w}
+                      </div>
+                    )
+                  })}
                 </div>
               )}
 
@@ -463,7 +493,19 @@ export default function FoodCapture({ onNewEntry, onPhaseChange }: FoodCapturePr
             handleTextSubmit()
           }
         }}
-        placeholder='Snap a photo or describe what you ate...'
+        onPaste={(e) => {
+          const items = e.clipboardData?.items
+          if (!items) return
+          for (const item of Array.from(items)) {
+            if (item.type.startsWith('image/')) {
+              e.preventDefault()
+              const file = item.getAsFile()
+              if (file) handleFileSelect(file)
+              return
+            }
+          }
+        }}
+        placeholder='Snap a photo, paste, or describe what you ate...'
         rows={2}
         className="w-full px-1 py-2 bg-transparent border-none text-base text-white resize-none focus:outline-none transparent-placeholder"
       />

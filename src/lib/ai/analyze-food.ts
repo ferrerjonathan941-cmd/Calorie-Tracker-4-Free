@@ -21,6 +21,7 @@ interface FoodIdentification {
   items: string[]
   isChainRestaurant: boolean
   chainName?: string
+  isOrderReceipt?: boolean
 }
 
 export async function identifyFoodItems(
@@ -50,16 +51,20 @@ export async function identifyFoodItems(
   "notFoodReason": "brief reason if not food, or null",
   "items": ["item name 1", "item name 2"],
   "isChainRestaurant": true/false,
-  "chainName": "chain name or null"
+  "chainName": "chain name or null",
+  "isOrderReceipt": true/false
 }
 
 Rules:
-- First determine if the image contains food or beverages. If it does NOT contain any food or drinks, set "isFood" to false, provide a brief friendly reason in "notFoodReason" (e.g. "This looks like a shoe, not food"), and return an empty items array.
-- If the image does contain food, set "isFood" to true and "notFoodReason" to null.
+- First determine if the image contains food, beverages, OR a food order/receipt. If it does NOT contain any food, drinks, or food orders, set "isFood" to false, provide a brief friendly reason in "notFoodReason" (e.g. "This looks like a shoe, not food"), and return an empty items array.
+- ORDER/RECEIPT SCREENSHOTS: If the image shows a food delivery order screen (DoorDash, Uber Eats, Grubhub, Postmates), a restaurant receipt, or an order confirmation, this IS valid food — set "isFood" to true and "isOrderReceipt" to true. Extract each food item listed on the order/receipt into the items array.
+- If the image does contain food (or is an order/receipt), set "isFood" to true and "notFoodReason" to null.
 - List each distinct food item by name (e.g. "Chick-fil-A spicy chicken sandwich", "french fries")
-- If this is from a recognizable chain restaurant (McDonald's, Chick-fil-A, Subway, etc.), set isChainRestaurant to true and provide the chainName
-- If you can see packaging, wrappers, or branding, use that to identify the chain
-- Keep item names specific — include the chain name if known (e.g. "McDonald's Big Mac" not just "burger")
+- If this is from a recognizable chain restaurant (McDonald's, Chick-fil-A, Subway, Chipotle, etc.), set isChainRestaurant to true and provide the chainName
+- If you can see packaging, wrappers, branding, or app logos, use that to identify the chain
+- BUILD-YOUR-OWN CHAINS (Chipotle, Subway, etc.): List each individual ingredient/component separately, NOT as one combined item. For example, for a Chipotle burrito bowl, list: ["Chicken", "Extra Chicken", "White Rice", "Black Beans", "Cheese", "Sour Cream", "Guacamole"] — NOT ["Chipotle Burrito Bowl"].
+- Include modifiers as part of the item name: "Extra Chicken", "Double Steak", "No Sour Cream", "Light Cheese"
+- Keep item names specific — include the chain name if known for fixed-menu items (e.g. "McDonald's Big Mac" not just "burger")
 - Do NOT estimate any nutritional values — only identify what the food items are`,
     },
   ])

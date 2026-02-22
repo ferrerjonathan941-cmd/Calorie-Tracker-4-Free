@@ -6,6 +6,7 @@ export interface FoodItem {
   fat: number
   quantity: string
   category?: string
+  autoCorrected?: boolean
 }
 
 export interface FoodAnalysis {
@@ -16,6 +17,8 @@ export interface FoodAnalysis {
   total_fat: number
   needsInput?: boolean
   warnings?: string[]
+  corrections?: string[]
+  correctionCount?: number
 }
 
 export interface FoodEntry {

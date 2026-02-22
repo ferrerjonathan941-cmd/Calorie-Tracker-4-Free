@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { analyzeFood, identifyFoodItems } from '@/lib/ai/analyze-food'
 import { validateNutrition } from '@/lib/ai/validate-nutrition'
 import { searchNutritionFacts, formatSearchContextForPrompt } from '@/lib/search/brave'
+import { matchChain, matchItems, buildChainAnalysis } from '@/lib/chain-nutrition'
 
 export async function POST(request: Request) {
   try {
@@ -93,6 +94,112 @@ export async function POST(request: Request) {
       publicUrl = url
     }
 
+    // ─── Chain Nutrition Lookup ───
+    // Try to match against hardcoded chain data before falling through to AI
+    if (isChainRestaurant && chainName && identifiedItems.length > 0) {
+      const chain = matchChain(chainName)
+      if (chain) {
+        const result = matchItems(chain, identifiedItems)
+
+        if (result.isFullMatch) {
+          // Full match: build analysis entirely from chain data, skip AI
+          const analysis = buildChainAnalysis(result)
+          const { warnings, corrections } = validateNutrition(analysis)
+          analysis.warnings = warnings
+          analysis.corrections = corrections
+
+          if (draftMode) {
+            return NextResponse.json({
+              analysis,
+              warnings: [...corrections, ...warnings],
+              image_url: publicUrl,
+              meal_type: mealType,
+              notes: description.trim() || null,
+            })
+          }
+
+          const { data: entry, error: dbError } = await supabase
+            .from('food_entries')
+            .insert({
+              user_id: user.id,
+              image_url: publicUrl,
+              meal_type: mealType,
+              food_items: analysis.food_items,
+              total_calories: analysis.total_calories,
+              total_protein: analysis.total_protein,
+              total_carbs: analysis.total_carbs,
+              total_fat: analysis.total_fat,
+              notes: description.trim() || null,
+            })
+            .select()
+            .single()
+
+          if (dbError) {
+            console.error('DB error:', dbError)
+            return NextResponse.json({ error: 'Failed to save entry' }, { status: 500 })
+          }
+
+          return NextResponse.json(entry)
+        }
+
+        if (result.matchedItems.length > 0) {
+          // Partial match: use AI only for unmatched items, then merge
+          let searchContext = ''
+          const contexts = await searchNutritionFacts(result.unmatchedItemNames.join(', '))
+          searchContext = formatSearchContextForPrompt(contexts)
+
+          const aiAnalysis = await analyzeFood({
+            base64Image: base64,
+            mimeType,
+            description: result.unmatchedItemNames.join(', '),
+            searchContext: searchContext || undefined,
+            isRestaurant: true,
+            isChainRestaurant: true,
+            chainName,
+          })
+
+          const analysis = buildChainAnalysis(result, aiAnalysis)
+          const { warnings, corrections } = validateNutrition(analysis, searchContext || undefined)
+          analysis.warnings = warnings
+          analysis.corrections = corrections
+
+          if (draftMode) {
+            return NextResponse.json({
+              analysis,
+              warnings: [...corrections, ...warnings],
+              image_url: publicUrl,
+              meal_type: mealType,
+              notes: description.trim() || null,
+            })
+          }
+
+          const { data: entry, error: dbError } = await supabase
+            .from('food_entries')
+            .insert({
+              user_id: user.id,
+              image_url: publicUrl,
+              meal_type: mealType,
+              food_items: analysis.food_items,
+              total_calories: analysis.total_calories,
+              total_protein: analysis.total_protein,
+              total_carbs: analysis.total_carbs,
+              total_fat: analysis.total_fat,
+              notes: description.trim() || null,
+            })
+            .select()
+            .single()
+
+          if (dbError) {
+            console.error('DB error:', dbError)
+            return NextResponse.json({ error: 'Failed to save entry' }, { status: 500 })
+          }
+
+          return NextResponse.json(entry)
+        }
+      }
+    }
+
+    // ─── Existing Flow (no chain match) ───
     // Search for nutrition facts
     let searchContext = ''
     if (description.trim()) {
@@ -117,14 +224,15 @@ export async function POST(request: Request) {
     })
 
     // Validate nutrition (cross-check against search data if available)
-    const { warnings } = validateNutrition(analysis, searchContext || undefined)
+    const { warnings, corrections } = validateNutrition(analysis, searchContext || undefined)
     analysis.warnings = warnings
+    analysis.corrections = corrections
 
     // Draft mode: return analysis without saving
     if (draftMode) {
       return NextResponse.json({
         analysis,
-        warnings,
+        warnings: [...corrections, ...warnings],
         image_url: publicUrl,
         meal_type: mealType,
         notes: description.trim() || null,
