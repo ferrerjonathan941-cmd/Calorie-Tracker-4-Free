@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { analyzeFood, identifyFoodItems } from '@/lib/ai/analyze-food'
+import { analyzeFood, identifyFoodItems, identifyMissedFoodItems } from '@/lib/ai/analyze-food'
 import { validateNutrition } from '@/lib/ai/validate-nutrition'
 import { searchNutritionFacts, formatSearchContextForPrompt } from '@/lib/search/brave'
 import { lookupUSDANutrients, formatUSDAContextForPrompt } from '@/lib/search/usda'
@@ -23,6 +23,64 @@ export async function POST(request: Request) {
     const description = (formData.get('description') as string) || ''
     const draftMode = formData.get('draftMode') === 'true'
     const isRestaurant = formData.get('isRestaurant') === 'true'
+    const findMissed = formData.get('findMissed') === 'true'
+
+    // ─── Find Missed Items Branch ───
+    if (findMissed && image) {
+      const existingItemNames: string[] = JSON.parse(
+        (formData.get('existingItems') as string) || '[]'
+      )
+
+      const bytes = await image.arrayBuffer()
+      const base64 = Buffer.from(bytes).toString('base64')
+      const mimeType = image.type
+
+      const { items: newItems } = await identifyMissedFoodItems(
+        base64,
+        mimeType,
+        existingItemNames,
+        description.trim() || undefined
+      )
+
+      if (newItems.length === 0) {
+        return NextResponse.json({ analysis: null, warnings: [], noNewItems: true })
+      }
+
+      // USDA + Brave parallel lookup for new items only
+      const [usdaResult, braveContexts] = await Promise.all([
+        lookupUSDANutrients(newItems),
+        searchNutritionFacts(newItems.map((i) => i.name).join(', ')),
+      ])
+      const usdaContext = formatUSDAContextForPrompt(newItems, usdaResult)
+      const searchContext = formatSearchContextForPrompt(braveContexts)
+
+      // Pass 2: analyze only the new items
+      const analysis = await analyzeFood({
+        base64Image: base64,
+        mimeType,
+        description: description.trim() || undefined,
+        usdaContext: usdaContext || undefined,
+        searchContext: searchContext || undefined,
+        identifiedItems: newItems,
+        existingItemNames,
+        isRestaurant: false,
+      })
+
+      const { warnings, corrections } = validateNutrition(
+        analysis,
+        searchContext || undefined,
+        newItems,
+        usdaResult
+      )
+      analysis.warnings = warnings
+      analysis.corrections = corrections
+
+      return NextResponse.json({
+        analysis,
+        warnings: [...corrections, ...warnings],
+        noNewItems: false,
+      })
+    }
 
     if (!image && !description.trim()) {
       return NextResponse.json(

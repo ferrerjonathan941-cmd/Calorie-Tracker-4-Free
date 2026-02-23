@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Camera, Paperclip, Loader2, X, Plus, Trash2, Check, RotateCcw, ArrowUp } from 'lucide-react'
+import { Camera, Paperclip, Loader2, X, Plus, Trash2, Check, RotateCcw, ArrowUp, ScanEye } from 'lucide-react'
 import { FoodEntry, FoodItem, FoodAnalysis } from '@/lib/types'
 import PortionAdjuster from '@/components/PortionAdjuster'
 import { LiquidButton } from '@/components/ui/liquid-glass-button'
@@ -45,6 +45,12 @@ export default function FoodCapture({ onNewEntry, onPhaseChange }: FoodCapturePr
   const [additionalDescription, setAdditionalDescription] = useState('')
   const [reanalyzing, setReanalyzing] = useState(false)
 
+  // Missed items re-scan state
+  const [missedMode, setMissedMode] = useState(false)
+  const [missedHint, setMissedHint] = useState('')
+  const [findingMissed, setFindingMissed] = useState(false)
+  const [missedMessage, setMissedMessage] = useState<string | null>(null)
+
   // Global paste handler: allow pasting images anywhere during input phase
   useEffect(() => {
     const handleGlobalPaste = (e: ClipboardEvent) => {
@@ -79,6 +85,10 @@ export default function FoodCapture({ onNewEntry, onPhaseChange }: FoodCapturePr
     setPortionMultiplier(1.0)
     setError(null)
     setAdditionalDescription('')
+    setMissedMode(false)
+    setMissedHint('')
+    setFindingMissed(false)
+    setMissedMessage(null)
     pendingFileRef.current = null
     base64Ref.current = null
   }
@@ -157,6 +167,55 @@ export default function FoodCapture({ onNewEntry, onPhaseChange }: FoodCapturePr
     const combinedDescription = `${description}. Additional details: ${additionalDescription}`
     await submitAnalysis(pendingFileRef.current || undefined, combinedDescription)
     setReanalyzing(false)
+  }
+
+  const handleFindMissed = async () => {
+    if (!pendingFileRef.current) return
+    setFindingMissed(true)
+    setMissedMessage(null)
+    setError(null)
+
+    const formData = new FormData()
+    formData.append('image', pendingFileRef.current)
+    formData.append('mealType', mealType)
+    formData.append('draftMode', 'true')
+    formData.append('findMissed', 'true')
+    formData.append('existingItems', JSON.stringify(draftItems.map((item) => item.name)))
+    if (missedHint.trim()) {
+      formData.append('description', missedHint.trim())
+    }
+
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to re-scan')
+      }
+
+      const data = await res.json()
+
+      if (data.noNewItems) {
+        setMissedMessage('No additional items found. Try adding a hint about what was missed.')
+        setFindingMissed(false)
+        return
+      }
+
+      const newItems: FoodItem[] = data.analysis.food_items
+      setDraftItems((prev) => [...prev, ...newItems])
+      setBaseItems((prev) => [...prev, ...newItems])
+      setWarnings((prev) => [...prev, ...(data.warnings || [])])
+      setPortionMultiplier(1.0)
+      setMissedMode(false)
+      setMissedHint('')
+      setMissedMessage(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong')
+    }
+    setFindingMissed(false)
   }
 
   // Draft item management
@@ -278,26 +337,6 @@ export default function FoodCapture({ onNewEntry, onPhaseChange }: FoodCapturePr
                 <img src={preview} alt="Food" className="w-full h-32 object-cover rounded-xl mb-3" />
               )}
 
-              {/* Validation warnings & corrections */}
-              {warnings.length > 0 && (
-                <div className="mb-3 space-y-1">
-                  {warnings.map((w, i) => {
-                    const isCorrection = w.startsWith('[Auto-corrected]')
-                    return (
-                      <div
-                        key={i}
-                        className={`text-xs p-2 rounded-lg ${
-                          isCorrection
-                            ? 'bg-blue-500/10 border border-blue-400/20 text-blue-300/80'
-                            : 'bg-white/[0.04] border border-white/[0.08] text-white/60'
-                        }`}
-                      >
-                        {w}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
 
               {/* Mixed dish prompt */}
               {draftAnalysis?.needsInput && (
@@ -397,6 +436,53 @@ export default function FoodCapture({ onNewEntry, onPhaseChange }: FoodCapturePr
                   </div>
                 ))}
               </div>
+
+              {/* Missed something re-scan */}
+              {preview && !missedMode && (
+                <button
+                  onClick={() => { setMissedMode(true); setMissedMessage(null) }}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 text-sm text-white/40 hover:text-white/60 transition-colors mb-1"
+                >
+                  <ScanEye className="w-4 h-4" />
+                  Missed something? Tap to re-scan
+                </button>
+              )}
+
+              {missedMode && (
+                <div className="mb-3 bg-white/[0.04] border border-white/[0.08] rounded-xl p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-white/80 font-medium">What did we miss?</p>
+                    <button
+                      onClick={() => { setMissedMode(false); setMissedHint(''); setMissedMessage(null) }}
+                      className="p-0.5 text-white/30 hover:text-white/60 rounded"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <textarea
+                    value={missedHint}
+                    onChange={(e) => setMissedHint(e.target.value)}
+                    placeholder="e.g., there's a drink behind the plate"
+                    rows={2}
+                    className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-sm text-white placeholder-text-dim resize-none focus:outline-none focus:ring-2 focus:ring-white/20 mb-2"
+                  />
+                  <button
+                    onClick={handleFindMissed}
+                    disabled={findingMissed}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-white/[0.08] rounded-lg hover:bg-white/[0.14] disabled:opacity-50 transition-colors"
+                  >
+                    {findingMissed ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <ScanEye className="w-3.5 h-3.5" />
+                    )}
+                    Re-scan photo
+                  </button>
+                  {missedMessage && (
+                    <p className="mt-2 text-xs text-white/50">{missedMessage}</p>
+                  )}
+                </div>
+              )}
 
               <button
                 onClick={addDraftItem}
@@ -506,15 +592,13 @@ export default function FoodCapture({ onNewEntry, onPhaseChange }: FoodCapturePr
             }
           }
         }}
-        placeholder={preview ? 'Add context or describe what you ate...' : 'Snap a photo, paste, or describe what you ate...'}
+        placeholder={preview ? 'Add context or describe what you ate (optional)...' : 'Snap a photo, paste, or describe what you ate...'}
         rows={2}
         className="w-full px-1 py-2 bg-transparent border-none text-base text-white resize-none focus:outline-none transparent-placeholder"
       />
-      {(description.trim() || preview) && (
+      {description.trim() && !preview && (
         <p className="text-xs text-text-dim mb-2 px-1">
-          {preview
-            ? 'Add a description (optional) then tap send'
-            : 'Press Enter to send'}
+          Press Enter to send
         </p>
       )}
 

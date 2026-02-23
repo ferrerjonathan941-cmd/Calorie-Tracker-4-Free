@@ -25,6 +25,7 @@ interface AnalyzeFoodOptions {
   isRestaurant?: boolean
   isChainRestaurant?: boolean
   chainName?: string
+  existingItemNames?: string[]
 }
 
 interface FoodIdentification {
@@ -105,6 +106,76 @@ category must be one of: fruit, vegetable, grain, protein, dairy, fat, beverage,
   return parsed
 }
 
+export async function identifyMissedFoodItems(
+  base64Image: string,
+  mimeType: string,
+  existingItemNames: string[],
+  userHint?: string
+): Promise<{ items: IdentifiedFoodItem[] }> {
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    systemInstruction: EXPERT_SYSTEM_INSTRUCTION,
+    generationConfig: {
+      temperature: 0,
+      topP: 0.1,
+      responseMimeType: 'application/json',
+    },
+  })
+
+  const existingList = existingItemNames.map((n) => `- ${n}`).join('\n')
+  const hintBlock = userHint
+    ? `\n\nUSER HINT: The user says they see "${userHint}" — use this as a strong signal for what to look for.`
+    : ''
+
+  const result = await model.generateContent([
+    {
+      inlineData: {
+        mimeType,
+        data: base64Image,
+      },
+    },
+    {
+      text: `Look at this food image again. The following items have ALREADY been identified — do NOT include them again:
+${existingList}
+
+Your job is to find any ADDITIONAL food or drink items that were missed in the first scan. Look carefully for:
+- Drinks (cups, glasses, bottles, cans) that may be partially hidden
+- Side dishes, sauces, condiments, or dips
+- Items behind or next to the main dish
+- Bread, rolls, or garnishes${hintBlock}
+
+Return a JSON object:
+{
+  "items": [{ "name": string, "estimatedWeightG": number, "category": string }]
+}
+
+Rules:
+- Return ONLY newly found items — never re-list existing items
+- If nothing new is found, return { "items": [] }
+- category must be one of: fruit, vegetable, grain, protein, dairy, fat, beverage, snack, mixed, condiment, other
+
+WEIGHT ESTIMATION: For each item, estimate its weight in grams using plate size (25-28cm standard dinner plate) and these heuristics:
+- Palm of hand = 85-115g protein | Fist = ~1 cup (~200g cooked) | Cupped hand = ½ cup | Thumb = 1 tablespoon
+- Be conservative rather than overestimating`,
+    },
+  ])
+
+  const text = result.response.text().trim()
+  const cleaned = text.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '')
+  const parsed = JSON.parse(cleaned)
+
+  // Safety net for unexpected format
+  if (parsed.items && parsed.items.length > 0 && typeof parsed.items[0] === 'string') {
+    parsed.items = parsed.items.map((name: string) => ({
+      name,
+      estimatedWeightG: 150,
+      category: 'other',
+    }))
+  }
+
+  return { items: parsed.items || [] }
+}
+
 const JSON_STRUCTURE = `Return a JSON object with this exact structure:
 {
   "food_items": [
@@ -164,31 +235,38 @@ function buildNutritionContext(usdaContext?: string, searchContext?: string): st
   return ctx
 }
 
+function buildExistingItemsExclusion(existingItemNames?: string[]): string {
+  if (!existingItemNames || existingItemNames.length === 0) return ''
+  const list = existingItemNames.map((n) => `- ${n}`).join('\n')
+  return `\n\nIMPORTANT — ONLY analyze the NEW items listed below. The following items have already been analyzed and must NOT appear in your response:\n${list}\n\nDo NOT include any of the above items in your food_items array. Only return nutrition for the newly identified items.`
+}
+
 function buildPrompt(options: AnalyzeFoodOptions): string {
-  const { description, searchContext, usdaContext, isRestaurant, isChainRestaurant } = options
+  const { description, searchContext, usdaContext, isRestaurant, isChainRestaurant, existingItemNames } = options
   const hasImage = Boolean(options.base64Image)
   const cookingCtx = buildCookingContext(isRestaurant || false, isChainRestaurant)
   const mixedDishCtx = buildMixedDishInstructions()
   const portionCtx = hasImage ? buildPortionInstructions() : ''
   const nutritionCtx = buildNutritionContext(usdaContext, searchContext)
+  const exclusionCtx = buildExistingItemsExclusion(existingItemNames)
 
   if (hasImage && description) {
     return `Analyze this food image. The user describes this meal as: "${description}"
 
-Use the image for visual identification and the description for context.${nutritionCtx}${cookingCtx}${mixedDishCtx}${portionCtx}
+Use the image for visual identification and the description for context.${nutritionCtx}${cookingCtx}${mixedDishCtx}${portionCtx}${exclusionCtx}
 
 ${JSON_STRUCTURE}`
   }
 
   if (hasImage) {
-    return `Analyze this food image and estimate the nutritional content.${nutritionCtx}${cookingCtx}${mixedDishCtx}${portionCtx}
+    return `Analyze this food image and estimate the nutritional content.${nutritionCtx}${cookingCtx}${mixedDishCtx}${portionCtx}${exclusionCtx}
 
 ${JSON_STRUCTURE}`
   }
 
   return `The user is logging a meal and described it as: "${description}"
 
-Based on this description, estimate the nutritional content for each item.${nutritionCtx}${cookingCtx}${mixedDishCtx}
+Based on this description, estimate the nutritional content for each item.${nutritionCtx}${cookingCtx}${mixedDishCtx}${exclusionCtx}
 
 ${JSON_STRUCTURE}`
 }
