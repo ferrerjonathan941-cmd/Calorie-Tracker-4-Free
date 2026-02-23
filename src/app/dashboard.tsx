@@ -327,9 +327,6 @@ export default function Dashboard({ initialEntries, userEmail }: DashboardProps)
                 </div>
               </div>
 
-              <p className="text-sm text-text-dim text-center">
-                Goal setting coming soon
-              </p>
             </div>
           </div>
 
