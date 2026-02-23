@@ -16,6 +16,105 @@
   --color-protein: #60A5FA;
   --color-carbs: #34D399;
   --color-fat: #FBBF24;
+
+  /* shadcn-compatible aliases used by sign-in component */
+  --color-background: #0A0A0A;
+  --color-foreground: #E8E8E8;
+  --color-card: #161616;
+  --color-muted-foreground: #888888;
+  --color-primary: #FF6B35;
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: #1C1C1C;
+}
+
+/* ── Sign-in page animations ── */
+
+@keyframes fadeSlideIn {
+  to {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0px);
+  }
+}
+
+@keyframes slideRightIn {
+  to {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateX(0px);
+  }
+}
+
+@keyframes testimonialIn {
+  to {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0px) scale(1);
+  }
+}
+
+.animate-element {
+  opacity: 0;
+  filter: blur(4px);
+  transform: translateY(12px);
+  animation: fadeSlideIn 0.5s ease forwards;
+}
+
+.animate-slide-right {
+  opacity: 0;
+  filter: blur(4px);
+  transform: translateX(-16px);
+  animation: slideRightIn 0.7s ease forwards;
+}
+
+.animate-testimonial {
+  opacity: 0;
+  filter: blur(4px);
+  transform: translateY(16px) scale(0.96);
+  animation: testimonialIn 0.6s ease forwards;
+}
+
+.animate-delay-100  { animation-delay: 100ms; }
+.animate-delay-200  { animation-delay: 200ms; }
+.animate-delay-300  { animation-delay: 300ms; }
+.animate-delay-400  { animation-delay: 400ms; }
+.animate-delay-500  { animation-delay: 500ms; }
+.animate-delay-600  { animation-delay: 600ms; }
+.animate-delay-700  { animation-delay: 700ms; }
+.animate-delay-800  { animation-delay: 800ms; }
+.animate-delay-900  { animation-delay: 900ms; }
+.animate-delay-1000 { animation-delay: 1000ms; }
+.animate-delay-1200 { animation-delay: 1200ms; }
+.animate-delay-1400 { animation-delay: 1400ms; }
+
+/* Custom checkbox for sign-in form */
+.custom-checkbox {
+  appearance: none;
+  width: 1rem;
+  height: 1rem;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.custom-checkbox:checked {
+  background: #a78bfa;
+  border-color: #a78bfa;
+}
+.custom-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  width: 4px;
+  height: 8px;
+  border: 2px solid white;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
 }
 
 html, body {
