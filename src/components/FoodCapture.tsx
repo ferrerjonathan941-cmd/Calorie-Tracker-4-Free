@@ -506,7 +506,7 @@ export default function FoodCapture({ onNewEntry, onPhaseChange }: FoodCapturePr
             }
           }
         }}
-        placeholder='Snap a photo, paste, or describe what you ate...'
+        placeholder={preview ? 'Add context or describe what you ate...' : 'Snap a photo, paste, or describe what you ate...'}
         rows={2}
         className="w-full px-1 py-2 bg-transparent border-none text-base text-white resize-none focus:outline-none transparent-placeholder"
       />
