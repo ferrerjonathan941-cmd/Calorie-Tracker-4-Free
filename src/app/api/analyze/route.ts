@@ -110,6 +110,7 @@ export async function POST(request: Request) {
       const bytes = await image.arrayBuffer()
       base64 = Buffer.from(bytes).toString('base64')
       mimeType = image.type
+      console.log(`[analyze] Image: ${image.name}, type=${mimeType}, size=${bytes.byteLength} bytes, base64=${base64.length} chars`)
 
       const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`
 
@@ -129,6 +130,8 @@ export async function POST(request: Request) {
           console.error('Upload error:', uploadResult.error)
           return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 })
         }
+
+        console.log(`[analyze] Pass 1 result:`, JSON.stringify({ isFood: identification.isFood, isChain: identification.isChainRestaurant, chainName: identification.chainName, itemCount: identification.items?.length, items: identification.items?.map(i => i.name) }))
 
         if (!identification.isFood) {
           // Clean up the uploaded image
@@ -168,8 +171,10 @@ export async function POST(request: Request) {
     // Try to match against hardcoded chain data before falling through to AI
     if (isChainRestaurant && chainName && identifiedItems.length > 0) {
       const chain = matchChain(chainName)
+      console.log(`[analyze] Chain lookup: chainName="${chainName}", matched=${!!chain}`)
       if (chain) {
         const result = matchItems(chain, identifiedItems.map((i) => i.name))
+        console.log(`[analyze] Chain match: fullMatch=${result.isFullMatch}, matched=${result.matchedItems.map(m => m.chainItem.name)}, unmatched=${result.unmatchedItemNames}`)
 
         if (result.isFullMatch) {
           // Full match: build analysis entirely from chain data, skip AI
@@ -226,6 +231,7 @@ export async function POST(request: Request) {
             isRestaurant: true,
             isChainRestaurant: true,
             chainName,
+            existingItemNames: result.matchedItems.map(m => m.chainItem.name),
           })
 
           const analysis = buildChainAnalysis(result, aiAnalysis)
@@ -347,8 +353,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(entry)
   } catch (error) {
-    console.error('Analysis error:', error)
     const message = error instanceof Error ? error.message : ''
+    const stack = error instanceof Error ? error.stack : ''
+    console.error(`[analyze] FATAL: message="${message}", stack=${stack}, raw=`, error)
     if (message.includes('429') || message.includes('quota') || message.includes('RESOURCE_EXHAUSTED')) {
       return NextResponse.json({ error: 'You\'ve run out of free credits — please upgrade your Gemini API plan or try again later' }, { status: 429 })
     }
