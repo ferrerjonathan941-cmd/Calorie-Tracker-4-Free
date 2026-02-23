@@ -109,12 +109,6 @@ export default function LoginPage() {
     setLoading(false)
   }
 
-  const handleGoogleSignIn = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    })
-  }
 
   const handleCreateAccount = () => {
     setError(null)
@@ -149,7 +143,7 @@ export default function LoginPage() {
       heroImageSrc={HERO_IMAGE}
       testimonials={TESTIMONIALS}
       onSignIn={handleSignIn}
-      onGoogleSignIn={handleGoogleSignIn}
+
       onResetPassword={handleResetPassword}
       onCreateAccount={handleCreateAccount}
       submitLabel={loading ? 'Loading…' : copy.submit}
