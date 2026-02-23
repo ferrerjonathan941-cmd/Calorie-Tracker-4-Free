@@ -14,6 +14,7 @@ export interface FoodItem {
   category?: string
   autoCorrected?: boolean
   estimatedWeightG?: number
+  servings?: number
 }
 
 export interface FoodAnalysis {

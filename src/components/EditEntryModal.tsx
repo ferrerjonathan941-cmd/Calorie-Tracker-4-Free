@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Plus, Trash2, Loader2 } from 'lucide-react'
+import { X, Plus, Minus, Trash2, Loader2 } from 'lucide-react'
 import { FoodEntry, FoodItem } from '@/lib/types'
 import PortionAdjuster from '@/components/PortionAdjuster'
 
@@ -49,6 +49,26 @@ export default function EditEntryModal({ entry, onSave, onClose }: EditEntryModa
       ...prev,
       { name: '', calories: 0, protein: 0, carbs: 0, fat: 0, quantity: '1 serving' },
     ])
+  }
+
+  const handleServingsChange = (index: number, newServings: number) => {
+    if (newServings < 1) return
+    const currentItem = items[index]
+    const oldServings = currentItem.servings || 1
+    const ratio = newServings / oldServings
+
+    const scaledItem = {
+      ...currentItem,
+      servings: newServings,
+      calories: Math.round(currentItem.calories * ratio),
+      protein: Math.round(currentItem.protein * ratio * 10) / 10,
+      carbs: Math.round(currentItem.carbs * ratio * 10) / 10,
+      fat: Math.round(currentItem.fat * ratio * 10) / 10,
+    }
+
+    setItems((prev) => prev.map((item, i) => (i === index ? scaledItem : item)))
+    setBaseItems((prev) => prev.map((item, i) => (i === index ? scaledItem : item)))
+    setPortionMultiplier(1.0)
   }
 
   const handlePortionChange = (multiplier: number) => {
@@ -147,6 +167,27 @@ export default function EditEntryModal({ entry, onSave, onClose }: EditEntryModa
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-text-dim">Servings</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleServingsChange(index, (item.servings || 1) - 1)}
+                    disabled={(item.servings || 1) <= 1}
+                    className="w-7 h-7 flex items-center justify-center text-white/60 bg-white/[0.04] hover:bg-white/[0.08] disabled:opacity-30 disabled:hover:bg-white/[0.04] rounded-lg transition-colors"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="w-8 text-center text-sm text-white font-medium tabular-nums">
+                    {item.servings || 1}
+                  </span>
+                  <button
+                    onClick={() => handleServingsChange(index, (item.servings || 1) + 1)}
+                    className="w-7 h-7 flex items-center justify-center text-white/60 bg-white/[0.04] hover:bg-white/[0.08] rounded-lg transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
               <div className="grid grid-cols-4 gap-2">
                 <div>
