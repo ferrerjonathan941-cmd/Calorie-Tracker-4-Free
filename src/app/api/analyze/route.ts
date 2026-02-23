@@ -27,59 +27,68 @@ export async function POST(request: Request) {
 
     // ─── Find Missed Items Branch ───
     if (findMissed && image) {
-      const existingItemNames: string[] = JSON.parse(
-        (formData.get('existingItems') as string) || '[]'
-      )
+      try {
+        const existingItemNames: string[] = JSON.parse(
+          (formData.get('existingItems') as string) || '[]'
+        )
 
-      const bytes = await image.arrayBuffer()
-      const base64 = Buffer.from(bytes).toString('base64')
-      const mimeType = image.type
+        const bytes = await image.arrayBuffer()
+        const base64 = Buffer.from(bytes).toString('base64')
+        const mimeType = image.type
 
-      const { items: newItems } = await identifyMissedFoodItems(
-        base64,
-        mimeType,
-        existingItemNames,
-        description.trim() || undefined
-      )
+        const { items: newItems } = await identifyMissedFoodItems(
+          base64,
+          mimeType,
+          existingItemNames,
+          description.trim() || undefined
+        )
 
-      if (newItems.length === 0) {
-        return NextResponse.json({ analysis: null, warnings: [], noNewItems: true })
+        if (newItems.length === 0) {
+          return NextResponse.json({ analysis: null, warnings: [], noNewItems: true })
+        }
+
+        // USDA + Brave parallel lookup for new items only
+        const [usdaResult, braveContexts] = await Promise.all([
+          lookupUSDANutrients(newItems),
+          searchNutritionFacts(newItems.map((i) => i.name).join(', ')),
+        ])
+        const usdaContext = formatUSDAContextForPrompt(newItems, usdaResult)
+        const searchContext = formatSearchContextForPrompt(braveContexts)
+
+        // Pass 2: analyze only the new items
+        const analysis = await analyzeFood({
+          base64Image: base64,
+          mimeType,
+          description: description.trim() || undefined,
+          usdaContext: usdaContext || undefined,
+          searchContext: searchContext || undefined,
+          identifiedItems: newItems,
+          existingItemNames,
+          isRestaurant: false,
+        })
+
+        const { warnings, corrections } = validateNutrition(
+          analysis,
+          searchContext || undefined,
+          newItems,
+          usdaResult
+        )
+        analysis.warnings = warnings
+        analysis.corrections = corrections
+
+        return NextResponse.json({
+          analysis,
+          warnings: [...corrections, ...warnings],
+          noNewItems: false,
+        })
+      } catch (missedError) {
+        console.error('Find missed error:', missedError)
+        const message = missedError instanceof Error ? missedError.message : ''
+        if (message.includes('429') || message.includes('quota')) {
+          return NextResponse.json({ error: 'Rate limit reached — please wait a moment and try again' }, { status: 429 })
+        }
+        return NextResponse.json({ error: 'Failed to re-scan for missed items' }, { status: 500 })
       }
-
-      // USDA + Brave parallel lookup for new items only
-      const [usdaResult, braveContexts] = await Promise.all([
-        lookupUSDANutrients(newItems),
-        searchNutritionFacts(newItems.map((i) => i.name).join(', ')),
-      ])
-      const usdaContext = formatUSDAContextForPrompt(newItems, usdaResult)
-      const searchContext = formatSearchContextForPrompt(braveContexts)
-
-      // Pass 2: analyze only the new items
-      const analysis = await analyzeFood({
-        base64Image: base64,
-        mimeType,
-        description: description.trim() || undefined,
-        usdaContext: usdaContext || undefined,
-        searchContext: searchContext || undefined,
-        identifiedItems: newItems,
-        existingItemNames,
-        isRestaurant: false,
-      })
-
-      const { warnings, corrections } = validateNutrition(
-        analysis,
-        searchContext || undefined,
-        newItems,
-        usdaResult
-      )
-      analysis.warnings = warnings
-      analysis.corrections = corrections
-
-      return NextResponse.json({
-        analysis,
-        warnings: [...corrections, ...warnings],
-        noNewItems: false,
-      })
     }
 
     if (!image && !description.trim()) {
