@@ -3,32 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { SignInPage, Testimonial } from '@/components/ui/sign-in'
+import { SignInPage } from '@/components/ui/sign-in'
 
 type Mode = 'signin' | 'signup' | 'reset'
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=1200&q=80'
-
-const TESTIMONIALS: Testimonial[] = [
-  {
-    avatarSrc: 'https://randomuser.me/api/portraits/women/44.jpg',
-    name: 'Emily Rose',
-    handle: '@emilyeats',
-    text: 'Lost 15 lbs in 3 months just by snapping photos of my meals. The AI accuracy is incredible!',
-  },
-  {
-    avatarSrc: 'https://randomuser.me/api/portraits/men/32.jpg',
-    name: 'James Park',
-    handle: '@jamesfit',
-    text: "Finally a calorie tracker that doesn't make me manually search for every food. Total game changer.",
-  },
-  {
-    avatarSrc: 'https://randomuser.me/api/portraits/women/68.jpg',
-    name: 'Sofia Lane',
-    handle: '@sofiahealthy',
-    text: 'The restaurant recognition is wild — scanned a Chipotle bowl and got perfect macros instantly.',
-  },
-]
 
 const MODE_COPY: Record<Mode, { title: string; description: string; submit: string; footerText: string; footerLink: string }> = {
   signin: {
@@ -141,7 +120,7 @@ export default function LoginPage() {
       title={titleNode}
       description={copy.description}
       heroImageSrc={HERO_IMAGE}
-      testimonials={TESTIMONIALS}
+
       onSignIn={handleSignIn}
 
       onResetPassword={handleResetPassword}
