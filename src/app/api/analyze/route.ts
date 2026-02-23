@@ -84,8 +84,8 @@ export async function POST(request: Request) {
       } catch (missedError) {
         console.error('Find missed error:', missedError)
         const message = missedError instanceof Error ? missedError.message : ''
-        if (message.includes('429') || message.includes('quota')) {
-          return NextResponse.json({ error: 'Rate limit reached — please wait a moment and try again' }, { status: 429 })
+        if (message.includes('429') || message.includes('quota') || message.includes('RESOURCE_EXHAUSTED')) {
+          return NextResponse.json({ error: 'You\'ve run out of free credits — please upgrade your Gemini API plan or try again later' }, { status: 429 })
         }
         return NextResponse.json({ error: 'Failed to re-scan for missed items' }, { status: 500 })
       }
@@ -348,6 +348,10 @@ export async function POST(request: Request) {
     return NextResponse.json(entry)
   } catch (error) {
     console.error('Analysis error:', error)
+    const message = error instanceof Error ? error.message : ''
+    if (message.includes('429') || message.includes('quota') || message.includes('RESOURCE_EXHAUSTED')) {
+      return NextResponse.json({ error: 'You\'ve run out of free credits — please upgrade your Gemini API plan or try again later' }, { status: 429 })
+    }
     return NextResponse.json({ error: 'Failed to analyze food' }, { status: 500 })
   }
 }
