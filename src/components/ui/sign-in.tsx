@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 
 // --- HELPER COMPONENTS ---
@@ -42,7 +42,7 @@ export interface SignInPageProps {
 // --- SUB-COMPONENTS ---
 
 const GlassInputWrapper = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-2xl border border-border bg-foreground/5 backdrop-blur-sm transition-colors focus-within:border-violet-400/70 focus-within:bg-violet-500/10">
+  <div className="rounded-2xl border border-border bg-foreground/5 backdrop-blur-sm transition-colors focus-within:border-[#7FFFD4]/70 focus-within:bg-[#7FFFD4]/10">
     {children}
   </div>
 )
@@ -76,6 +76,31 @@ export const SignInPage: React.FC<SignInPageProps> = ({
   showRememberMe = true,
 }) => {
   const [showPassword, setShowPassword] = useState(false)
+  const formRef = useRef<HTMLFormElement>(null)
+  const hasAutoSubmitted = useRef(false)
+
+  // Detect autofill (e.g. Face ID / password manager) and auto-submit
+  useEffect(() => {
+    if (!showPasswordField) return
+    hasAutoSubmitted.current = false
+
+    const interval = setInterval(() => {
+      if (hasAutoSubmitted.current) return
+      const form = formRef.current
+      if (!form) return
+      const email = (form.elements.namedItem('email') as HTMLInputElement)?.value
+      const password = (form.elements.namedItem('password') as HTMLInputElement)?.value
+      if (email && password && password.length >= 6) {
+        hasAutoSubmitted.current = true
+        clearInterval(interval)
+        form.requestSubmit()
+      }
+    }, 300)
+
+    // Stop polling after 5 seconds
+    const timeout = setTimeout(() => clearInterval(interval), 5000)
+    return () => { clearInterval(interval); clearTimeout(timeout) }
+  }, [showPasswordField])
 
   return (
     <div className="h-[100dvh] flex flex-col md:flex-row w-[100dvw]">
@@ -83,22 +108,12 @@ export const SignInPage: React.FC<SignInPageProps> = ({
       <section className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="flex flex-col gap-6">
-            {/* App logo */}
-            <div className="animate-element animate-delay-100 flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-[#FF8F65] flex items-center justify-center text-xl shadow-lg shadow-accent/20">
-                🔥
-              </div>
-              <span className="text-lg font-semibold text-text font-[family-name:var(--font-display)]">
-                Calorie Tracker
-              </span>
-            </div>
-
             <h1 className="animate-element animate-delay-200 text-4xl md:text-5xl font-semibold leading-tight text-foreground">
               {title}
             </h1>
             <p className="animate-element animate-delay-300 text-muted-foreground">{description}</p>
 
-            <form className="space-y-5" onSubmit={onSignIn}>
+            <form ref={formRef} className="space-y-5" onSubmit={onSignIn}>
               <div className="animate-element animate-delay-400">
                 <label className="text-sm font-medium text-muted-foreground block mb-1.5">
                   Email Address
@@ -155,7 +170,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                     <a
                       href="#"
                       onClick={(e) => { e.preventDefault(); onResetPassword() }}
-                      className="hover:underline text-violet-400 transition-colors"
+                      className="hover:underline text-[#7FFFD4] transition-colors"
                     >
                       Reset password
                     </a>
@@ -165,7 +180,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
 
               <button
                 type="submit"
-                className="animate-element animate-delay-700 w-full rounded-2xl bg-primary py-4 font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                className="animate-element animate-delay-700 w-full rounded-2xl bg-[#7FFFD4] py-4 font-medium text-black hover:bg-[#7FFFD4]/90 transition-colors"
               >
                 {submitLabel}
               </button>
@@ -195,7 +210,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
               <a
                 href="#"
                 onClick={(e) => { e.preventDefault(); onCreateAccount?.() }}
-                className="text-violet-400 hover:underline transition-colors"
+                className="text-[#7FFFD4] hover:underline transition-colors"
               >
                 {footerLinkText}
               </a>
