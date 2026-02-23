@@ -1,15 +1,27 @@
 import { GoogleGenerativeAI, Part } from '@google/generative-ai'
-import { FoodItem, FoodAnalysis } from '@/lib/types'
+import { FoodItem, FoodAnalysis, IdentifiedFoodItem } from '@/lib/types'
 
 export type { FoodItem, FoodAnalysis }
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+
+const EXPERT_SYSTEM_INSTRUCTION = `You are a Registered Dietitian with 15 years of clinical experience and deep expertise in the USDA FoodData Central database.
+
+CALORIC DENSITY REFERENCE (kcal per 100g):
+- Leafy vegetables: 14-25 | Non-starchy veg: 25-45 | Starchy veg: 75-90
+- Fresh fruit: 45-80 | Cooked grains (rice, pasta): 110-150 | Bread: 230-280
+- Lean protein (chicken breast, fish): 100-165 | Fatty protein (beef, salmon): 150-300
+- Eggs: 145-155 | Cheese: 300-400 | Nuts/seeds: 550-650 | Oils/butter: 717-900
+
+When USDA data is provided, treat it as authoritative ground truth. Your task is to confirm or adjust the weight estimate from visual evidence, then the pre-calculated nutrition follows automatically.`
 
 interface AnalyzeFoodOptions {
   base64Image?: string
   mimeType?: string
   description?: string
   searchContext?: string
+  usdaContext?: string
+  identifiedItems?: IdentifiedFoodItem[]
   isRestaurant?: boolean
   isChainRestaurant?: boolean
   chainName?: string
@@ -18,7 +30,7 @@ interface AnalyzeFoodOptions {
 interface FoodIdentification {
   isFood: boolean
   notFoodReason?: string
-  items: string[]
+  items: IdentifiedFoodItem[]
   isChainRestaurant: boolean
   chainName?: string
   isOrderReceipt?: boolean
@@ -30,6 +42,7 @@ export async function identifyFoodItems(
 ): Promise<FoodIdentification> {
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
+    systemInstruction: EXPERT_SYSTEM_INSTRUCTION,
     generationConfig: {
       temperature: 0,
       topP: 0.1,
@@ -49,7 +62,7 @@ export async function identifyFoodItems(
 {
   "isFood": true/false,
   "notFoodReason": "brief reason if not food, or null",
-  "items": ["item name 1", "item name 2"],
+  "items": [{ "name": string, "estimatedWeightG": number, "category": string }],
   "isChainRestaurant": true/false,
   "chainName": "chain name or null",
   "isOrderReceipt": true/false
@@ -59,19 +72,37 @@ Rules:
 - First determine if the image contains food, beverages, OR a food order/receipt. If it does NOT contain any food, drinks, or food orders, set "isFood" to false, provide a brief friendly reason in "notFoodReason" (e.g. "This looks like a shoe, not food"), and return an empty items array.
 - ORDER/RECEIPT SCREENSHOTS: If the image shows a food delivery order screen (DoorDash, Uber Eats, Grubhub, Postmates), a restaurant receipt, or an order confirmation, this IS valid food — set "isFood" to true and "isOrderReceipt" to true. Extract each food item listed on the order/receipt into the items array.
 - If the image does contain food (or is an order/receipt), set "isFood" to true and "notFoodReason" to null.
-- List each distinct food item by name (e.g. "Chick-fil-A spicy chicken sandwich", "french fries")
+- List each distinct food item by name (e.g. "grilled chicken breast", "white rice cooked")
 - If this is from a recognizable chain restaurant (McDonald's, Chick-fil-A, Subway, Chipotle, etc.), set isChainRestaurant to true and provide the chainName
 - If you can see packaging, wrappers, branding, or app logos, use that to identify the chain
-- BUILD-YOUR-OWN CHAINS (Chipotle, Subway, etc.): List each individual ingredient/component separately, NOT as one combined item. For example, for a Chipotle burrito bowl, list: ["Chicken", "Extra Chicken", "White Rice", "Black Beans", "Cheese", "Sour Cream", "Guacamole"] — NOT ["Chipotle Burrito Bowl"].
+- BUILD-YOUR-OWN CHAINS (Chipotle, Subway, etc.): List each individual ingredient/component separately, NOT as one combined item.
 - Include modifiers as part of the item name: "Extra Chicken", "Double Steak", "No Sour Cream", "Light Cheese"
 - Keep item names specific — include the chain name if known for fixed-menu items (e.g. "McDonald's Big Mac" not just "burger")
-- Do NOT estimate any nutritional values — only identify what the food items are`,
+- Do NOT estimate any nutritional values — only identify what the food items are
+
+WEIGHT ESTIMATION: For each item, estimate its weight in grams using plate size (25-28cm standard dinner plate) and these heuristics:
+- Palm of hand = 85-115g protein | Fist = ~1 cup (~200g cooked) | Cupped hand = ½ cup | Thumb = 1 tablespoon
+- Typical: chicken breast 150-170g, burger patty 85-115g, 1 cup cooked rice 180-200g, 1 egg 50g, slice of bread 30g
+- Be conservative rather than overestimating
+
+category must be one of: fruit, vegetable, grain, protein, dairy, fat, beverage, snack, mixed, condiment, other`,
     },
   ])
 
   const text = result.response.text().trim()
   const cleaned = text.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '')
-  return JSON.parse(cleaned)
+  const parsed = JSON.parse(cleaned)
+
+  // Backward-compat: if items is array of strings (shouldn't happen but safety net)
+  if (parsed.items && parsed.items.length > 0 && typeof parsed.items[0] === 'string') {
+    parsed.items = parsed.items.map((name: string) => ({
+      name,
+      estimatedWeightG: 150,
+      category: 'other',
+    }))
+  }
+
+  return parsed
 }
 
 const JSON_STRUCTURE = `Return a JSON object with this exact structure:
@@ -114,38 +145,50 @@ function buildPortionInstructions(): string {
   return `\n\nPORTION ESTIMATION: Look for reference objects in the image — plates (~10-11 inches), forks, hands, cups, or standard containers for scale. State your portion assumption in the quantity field (e.g., "1 medium plate, ~2 cups"). When in doubt, estimate conservatively.`
 }
 
-function buildSearchDirective(searchContext?: string): string {
-  if (!searchContext) return ''
-  return `${searchContext}
+function buildNutritionContext(usdaContext?: string, searchContext?: string): string {
+  let ctx = ''
 
-IMPORTANT: You MUST use the nutrition data found above. Use those EXACT numbers for calories, protein, carbs, and fat. Do NOT substitute your own estimates when real data is available. If EXTRACTED VALUES are provided, those are your ground truth.`
+  if (usdaContext) {
+    ctx += usdaContext
+    ctx += '\n\nINSTRUCTION: Use the CALCULATED USDA values above as your primary answer for calories and macros. Only adjust the weight estimate if visual evidence strongly contradicts the Pass 1 estimate. The nutrition follows automatically from weight × USDA per-100g values.'
+  }
+
+  if (searchContext) {
+    if (usdaContext) {
+      ctx += `\n\nSUPPLEMENTAL WEB DATA (for items not in USDA above):\n${searchContext}`
+    } else {
+      ctx += `${searchContext}\n\nIMPORTANT: You MUST use the nutrition data found above. Use those EXACT numbers for calories, protein, carbs, and fat. Do NOT substitute your own estimates when real data is available. If EXTRACTED VALUES are provided, those are your ground truth.`
+    }
+  }
+
+  return ctx
 }
 
 function buildPrompt(options: AnalyzeFoodOptions): string {
-  const { description, searchContext, isRestaurant, isChainRestaurant } = options
+  const { description, searchContext, usdaContext, isRestaurant, isChainRestaurant } = options
   const hasImage = Boolean(options.base64Image)
   const cookingCtx = buildCookingContext(isRestaurant || false, isChainRestaurant)
   const mixedDishCtx = buildMixedDishInstructions()
   const portionCtx = hasImage ? buildPortionInstructions() : ''
-  const searchDirective = buildSearchDirective(searchContext)
+  const nutritionCtx = buildNutritionContext(usdaContext, searchContext)
 
   if (hasImage && description) {
     return `Analyze this food image. The user describes this meal as: "${description}"
 
-Use the image for visual identification and the description for context.${searchDirective}${cookingCtx}${mixedDishCtx}${portionCtx}
+Use the image for visual identification and the description for context.${nutritionCtx}${cookingCtx}${mixedDishCtx}${portionCtx}
 
 ${JSON_STRUCTURE}`
   }
 
   if (hasImage) {
-    return `Analyze this food image and estimate the nutritional content.${searchDirective}${cookingCtx}${mixedDishCtx}${portionCtx}
+    return `Analyze this food image and estimate the nutritional content.${nutritionCtx}${cookingCtx}${mixedDishCtx}${portionCtx}
 
 ${JSON_STRUCTURE}`
   }
 
   return `The user is logging a meal and described it as: "${description}"
 
-Based on this description, estimate the nutritional content for each item.${searchDirective}${cookingCtx}${mixedDishCtx}
+Based on this description, estimate the nutritional content for each item.${nutritionCtx}${cookingCtx}${mixedDishCtx}
 
 ${JSON_STRUCTURE}`
 }
@@ -153,6 +196,7 @@ ${JSON_STRUCTURE}`
 export async function analyzeFood(options: AnalyzeFoodOptions): Promise<FoodAnalysis> {
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
+    systemInstruction: EXPERT_SYSTEM_INSTRUCTION,
     generationConfig: {
       temperature: 0,
       topP: 0.1,

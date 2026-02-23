@@ -1,5 +1,6 @@
-import { FoodAnalysis } from '@/lib/types'
+import { FoodAnalysis, IdentifiedFoodItem } from '@/lib/types'
 import { extractNutritionFromSnippet } from '@/lib/search/brave'
+import type { USDALookupResult } from '@/lib/search/usda'
 
 const CATEGORY_RANGES: Record<string, { min: number; max: number }> = {
   fruit: { min: 5, max: 200 },
@@ -44,7 +45,9 @@ function estimateMacrosFromCalories(
 
 export function validateNutrition(
   analysis: FoodAnalysis,
-  searchContext?: string
+  searchContext?: string,
+  identifiedItems?: IdentifiedFoodItem[],
+  usdaMap?: Map<string, USDALookupResult>
 ): { warnings: string[]; corrections: string[]; isValid: boolean } {
   const warnings: string[] = []
   const corrections: string[] = []
@@ -59,14 +62,82 @@ export function validateNutrition(
     }
   }
 
+  // Absolute meal bounds check
+  if (analysis.total_calories < 50 && analysis.total_calories > 0) {
+    warnings.push('Total seems too low (<50 kcal)')
+  }
+  if (analysis.total_calories > 3000) {
+    warnings.push('Exceeds 3000 kcal — multiple servings?')
+  }
+  for (const item of analysis.food_items) {
+    const category = item.category || 'other'
+    if (item.calories > 1500 && category !== 'mixed') {
+      warnings.push(`"${item.name}" (${item.calories} cal) — single ingredient exceeds typical max, check portion`)
+    }
+  }
+
+  // Caloric density check (physically impossible values)
+  if (identifiedItems) {
+    for (const item of analysis.food_items) {
+      const identified = identifiedItems.find(
+        (i) => i.name.toLowerCase() === item.name.toLowerCase()
+      )
+      if (identified && identified.estimatedWeightG > 0) {
+        const density = (item.calories / identified.estimatedWeightG) * 100
+        if (density > 900) {
+          warnings.push(
+            `"${item.name}": caloric density (${Math.round(density)} kcal/100g) exceeds physical maximum of 900 kcal/100g`
+          )
+        }
+      }
+    }
+  }
+
+  // USDA per-item cross-check (auto-correct if >50% off, warn if >15% off)
+  if (usdaMap && identifiedItems) {
+    for (const item of analysis.food_items) {
+      if (item.autoCorrected) continue
+      const identified = identifiedItems.find(
+        (i) => i.name.toLowerCase() === item.name.toLowerCase()
+      )
+      if (!identified) continue
+
+      const usdaResult = usdaMap.get(identified.name)
+      if (!usdaResult?.match || usdaResult.confidence === 'none') continue
+
+      const { per100g } = usdaResult.match
+      const expectedCalories = (per100g.calories / 100) * identified.estimatedWeightG
+      if (expectedCalories === 0) continue
+
+      const calDiff = Math.abs(expectedCalories - item.calories) / expectedCalories
+
+      if (calDiff > 0.50) {
+        // Auto-correct to USDA values
+        const w = identified.estimatedWeightG
+        item.calories = Math.round((per100g.calories / 100) * w)
+        item.protein = Math.round((per100g.protein / 100) * w * 10) / 10
+        item.carbs = Math.round((per100g.carbs / 100) * w * 10) / 10
+        item.fat = Math.round((per100g.fat / 100) * w * 10) / 10
+        item.autoCorrected = true
+        corrections.push(
+          `[Auto-corrected] "${item.name}": calories were >50% off from USDA data — corrected to ${item.calories} cal (USDA: ${usdaResult.match.description})`
+        )
+      } else if (calDiff > 0.15) {
+        warnings.push(
+          `"${item.name}": calories (${item.calories}) differ ${Math.round(calDiff * 100)}% from USDA estimate (${Math.round(expectedCalories)} cal)`
+        )
+      }
+    }
+  }
+
   // Macro math check + auto-correction for severe hallucinations
   for (const item of analysis.food_items) {
     if (item.calories === 0) continue
     const calculatedCals = item.protein * 4 + item.carbs * 4 + item.fat * 9
     const ratio = Math.abs(calculatedCals - item.calories) / item.calories
 
-    if (ratio > 1.0) {
-      // Severe hallucination: macro-calculated calories >100% off from stated calories
+    if (ratio > 0.5) {
+      // Severe: macro-calculated calories >50% off from stated calories
       const category = item.category || 'other'
 
       // Try search data first if it has complete macros

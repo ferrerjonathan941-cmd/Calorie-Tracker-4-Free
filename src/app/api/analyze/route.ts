@@ -3,7 +3,10 @@ import { createClient } from '@/lib/supabase/server'
 import { analyzeFood, identifyFoodItems } from '@/lib/ai/analyze-food'
 import { validateNutrition } from '@/lib/ai/validate-nutrition'
 import { searchNutritionFacts, formatSearchContextForPrompt } from '@/lib/search/brave'
+import { lookupUSDANutrients, formatUSDAContextForPrompt } from '@/lib/search/usda'
+import type { USDALookupResult } from '@/lib/search/usda'
 import { matchChain, matchItems, buildChainAnalysis } from '@/lib/chain-nutrition'
+import type { IdentifiedFoodItem } from '@/lib/types'
 
 export async function POST(request: Request) {
   try {
@@ -33,7 +36,7 @@ export async function POST(request: Request) {
     let publicUrl: string | null = null
     let isChainRestaurant = false
     let chainName: string | undefined
-    let identifiedItems: string[] = []
+    let identifiedItems: IdentifiedFoodItem[] = []
 
     // Handle image upload when present
     if (image) {
@@ -99,7 +102,7 @@ export async function POST(request: Request) {
     if (isChainRestaurant && chainName && identifiedItems.length > 0) {
       const chain = matchChain(chainName)
       if (chain) {
-        const result = matchItems(chain, identifiedItems)
+        const result = matchItems(chain, identifiedItems.map((i) => i.name))
 
         if (result.isFullMatch) {
           // Full match: build analysis entirely from chain data, skip AI
@@ -199,32 +202,46 @@ export async function POST(request: Request) {
       }
     }
 
-    // ─── Existing Flow (no chain match) ───
-    // Search for nutrition facts
+    // ─── USDA + Brave parallel lookup ───
+    let usdaMap: Map<string, USDALookupResult> | undefined
+    let usdaContext = ''
     let searchContext = ''
-    if (description.trim()) {
-      // Text provided: search using the user's description
+
+    if (identifiedItems.length > 0) {
+      // PARALLEL: USDA + Brave lookups simultaneously
+      const [usdaResult, braveContexts] = await Promise.all([
+        lookupUSDANutrients(identifiedItems),
+        searchNutritionFacts(identifiedItems.map((i) => i.name).join(', ')),
+      ])
+      usdaMap = usdaResult
+      usdaContext = formatUSDAContextForPrompt(identifiedItems, usdaMap)
+      searchContext = formatSearchContextForPrompt(braveContexts)
+    } else if (description.trim()) {
+      // Text-only or image+description: Brave only (no identifiedItems to look up)
       const contexts = await searchNutritionFacts(description)
-      searchContext = formatSearchContextForPrompt(contexts)
-    } else if (identifiedItems.length > 0) {
-      // Image-only: search using identified food names from Pass 1
-      const contexts = await searchNutritionFacts(identifiedItems.join(', '))
       searchContext = formatSearchContextForPrompt(contexts)
     }
 
-    // Analyze with Gemini (Pass 2: full analysis with image + search context)
+    // Analyze with Gemini (Pass 2: full analysis with image + USDA + search context)
     const analysis = await analyzeFood({
       base64Image: base64,
       mimeType,
       description: description.trim() || undefined,
+      usdaContext: usdaContext || undefined,
       searchContext: searchContext || undefined,
+      identifiedItems: identifiedItems.length > 0 ? identifiedItems : undefined,
       isRestaurant,
       isChainRestaurant,
       chainName,
     })
 
-    // Validate nutrition (cross-check against search data if available)
-    const { warnings, corrections } = validateNutrition(analysis, searchContext || undefined)
+    // Validate nutrition (cross-check against USDA + search data if available)
+    const { warnings, corrections } = validateNutrition(
+      analysis,
+      searchContext || undefined,
+      identifiedItems.length > 0 ? identifiedItems : undefined,
+      usdaMap
+    )
     analysis.warnings = warnings
     analysis.corrections = corrections
 

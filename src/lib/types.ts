@@ -1,3 +1,9 @@
+export interface IdentifiedFoodItem {
+  name: string
+  estimatedWeightG: number
+  category?: string
+}
+
 export interface FoodItem {
   name: string
   calories: number
@@ -7,6 +13,7 @@ export interface FoodItem {
   quantity: string
   category?: string
   autoCorrected?: boolean
+  estimatedWeightG?: number
 }
 
 export interface FoodAnalysis {
