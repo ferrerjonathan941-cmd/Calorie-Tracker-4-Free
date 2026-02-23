@@ -41,12 +41,14 @@ export async function middleware(request: NextRequest) {
   const publicPaths = ['/login', '/auth/callback']
   const isPublic = publicPaths.some((path) => request.nextUrl.pathname.startsWith(path))
 
-  if (!user && !isPublic) {
+  // If no session but auth cookies exist, the user was previously signed in.
+  // Let the request through — the client-side SupabaseProvider will recover
+  // the session via onAuthStateChange / token refresh.
+  const hasAuthCookies = request.cookies.getAll().some(c => c.name.startsWith('sb-'))
+
+  if (!user && !isPublic && !hasAuthCookies) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    // Forward cookies from supabaseResponse so stale session cookies are
-    // properly cleared. Without this, the browser and server go out of sync
-    // and the user's session is terminated prematurely.
     const redirectResponse = NextResponse.redirect(url)
     supabaseResponse.cookies.getAll().forEach((cookie) => {
       redirectResponse.cookies.set(cookie)

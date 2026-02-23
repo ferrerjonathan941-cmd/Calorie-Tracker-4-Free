@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Dashboard from './dashboard'
 
@@ -8,7 +9,16 @@ export default async function HomePage() {
   const user = session?.user
 
   if (!user) {
-    redirect('/login')
+    // If auth cookies exist, the user was previously signed in — render
+    // the dashboard shell and let the client-side SupabaseProvider recover
+    // the session via token refresh. Only hard-redirect when there are
+    // truly no cookies (never logged in or explicitly signed out).
+    const cookieStore = await cookies()
+    const hasAuthCookies = cookieStore.getAll().some(c => c.name.startsWith('sb-'))
+    if (!hasAuthCookies) {
+      redirect('/login')
+    }
+    return <Dashboard initialEntries={[]} userEmail="" />
   }
 
   // Fetch recent entries (48h window to cover any timezone offset)

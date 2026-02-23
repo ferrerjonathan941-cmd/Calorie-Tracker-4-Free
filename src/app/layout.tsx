@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans, Space_Grotesk } from "next/font/google";
+import SupabaseProvider from "@/components/SupabaseProvider";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -40,7 +41,7 @@ export default function RootLayout({
       <body
         className={`${dmSans.variable} ${spaceGrotesk.variable} antialiased bg-bg`}
       >
-        {children}
+        <SupabaseProvider>{children}</SupabaseProvider>
       </body>
     </html>
   );
