@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import dynamic from 'next/dynamic'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Plus, X } from 'lucide-react'
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSameDay } from 'date-fns'
 import FoodCapture from '@/components/FoodCapture'
+import ManualEntryForm from '@/components/ManualEntryForm'
 import DailyLog from '@/components/DailyLog'
 import EditEntryModal from '@/components/EditEntryModal'
 import DateNavigator from '@/components/DateNavigator'
@@ -50,10 +51,11 @@ export default function Dashboard({ initialEntries, userEmail }: DashboardProps)
     })
   })
   const [editingEntry, setEditingEntry] = useState<FoodEntry | null>(null)
+  const [showManualEntry, setShowManualEntry] = useState(false)
 
   // Track FoodCapture phase for disabling swipe
   const [capturePhase, setCapturePhase] = useState<string>('input')
-  const isOverlayActive = capturePhase !== 'input' || editingEntry !== null
+  const isOverlayActive = capturePhase !== 'input' || editingEntry !== null || showManualEntry
 
   // History state
   const [historyTab, setHistoryTab] = useState<HistoryTab>('day')
@@ -202,9 +204,17 @@ export default function Dashboard({ initialEntries, userEmail }: DashboardProps)
           {/* ── Page 1: Logs ── */}
           <div className="h-full overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+1rem)]">
             <div className="w-full max-w-lg mx-auto px-4 pt-6 space-y-4">
-              <h1 className="text-2xl font-semibold text-white font-[family-name:var(--font-display)]">
-                Log
-              </h1>
+              <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-semibold text-white font-[family-name:var(--font-display)]">
+                  Log
+                </h1>
+                <button
+                  onClick={() => setShowManualEntry(true)}
+                  className="p-1.5 text-white/40 hover:text-white/60 transition-colors"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
 
               {/* Period tabs */}
               <div className="flex gap-1 bg-surface/60 backdrop-blur rounded-xl p-1 border border-white/[0.06]">
@@ -345,6 +355,35 @@ export default function Dashboard({ initialEntries, userEmail }: DashboardProps)
           </div>
         </SwipeContainer>
       </div>
+
+      {/* Manual entry overlay */}
+      {showManualEntry && (
+        <div className="fixed inset-0 bg-bg z-[60] flex flex-col">
+          <div className="w-full max-w-lg mx-auto px-4 pt-6 flex items-center justify-between">
+            <h1 className="text-2xl font-semibold text-white font-[family-name:var(--font-display)]">
+              Manual Entry
+            </h1>
+            <button
+              onClick={() => setShowManualEntry(false)}
+              className="p-1.5 text-white/40 hover:text-white/60 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            <div className="w-full max-w-lg mx-auto px-4 py-4">
+              <ManualEntryForm
+                mealType="manual"
+                onNewEntry={(entry) => {
+                  handleNewEntry(entry)
+                  setShowManualEntry(false)
+                }}
+                onCancel={() => setShowManualEntry(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit modal */}
       {editingEntry && (

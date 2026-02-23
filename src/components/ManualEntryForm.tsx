@@ -6,6 +6,7 @@ import { FoodEntry, FoodItem } from '@/lib/types'
 
 interface ManualEntryFormProps {
   onNewEntry: (entry: FoodEntry) => void
+  onCancel?: () => void
   mealType: string
 }
 
@@ -27,7 +28,7 @@ const emptyItem = (): ManualItem => ({
   quantity: '1 serving',
 })
 
-export default function ManualEntryForm({ onNewEntry, mealType }: ManualEntryFormProps) {
+export default function ManualEntryForm({ onNewEntry, onCancel, mealType }: ManualEntryFormProps) {
   const [items, setItems] = useState<ManualItem[]>([emptyItem()])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -82,6 +83,7 @@ export default function ManualEntryForm({ onNewEntry, mealType }: ManualEntryFor
         body: JSON.stringify({
           meal_type: mealType,
           food_items: foodItems,
+          logged_at: new Date().toISOString(),
           ...totals,
         }),
       })
@@ -128,7 +130,7 @@ export default function ManualEntryForm({ onNewEntry, mealType }: ManualEntryFor
                 type="number"
                 value={item.calories}
                 onChange={(e) => updateItem(index, 'calories', e.target.value)}
-                className="w-full text-sm text-text bg-white/[0.04] border border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent"
+                className="w-full text-sm text-text bg-white/[0.04] border border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-white/20"
                 placeholder="0"
               />
             </div>
@@ -139,7 +141,7 @@ export default function ManualEntryForm({ onNewEntry, mealType }: ManualEntryFor
                 step="0.1"
                 value={item.protein}
                 onChange={(e) => updateItem(index, 'protein', e.target.value)}
-                className="w-full text-sm text-text bg-white/[0.04] border border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent"
+                className="w-full text-sm text-text bg-white/[0.04] border border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-white/20"
                 placeholder="0"
               />
             </div>
@@ -150,7 +152,7 @@ export default function ManualEntryForm({ onNewEntry, mealType }: ManualEntryFor
                 step="0.1"
                 value={item.carbs}
                 onChange={(e) => updateItem(index, 'carbs', e.target.value)}
-                className="w-full text-sm text-text bg-white/[0.04] border border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent"
+                className="w-full text-sm text-text bg-white/[0.04] border border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-white/20"
                 placeholder="0"
               />
             </div>
@@ -161,7 +163,7 @@ export default function ManualEntryForm({ onNewEntry, mealType }: ManualEntryFor
                 step="0.1"
                 value={item.fat}
                 onChange={(e) => updateItem(index, 'fat', e.target.value)}
-                className="w-full text-sm text-text bg-white/[0.04] border border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent"
+                className="w-full text-sm text-text bg-white/[0.04] border border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-white/20"
                 placeholder="0"
               />
             </div>
@@ -188,23 +190,34 @@ export default function ManualEntryForm({ onNewEntry, mealType }: ManualEntryFor
         <div className="bg-white/[0.04] text-white/60 text-sm p-3 rounded-lg">{error}</div>
       )}
 
-      <button
-        onClick={handleSubmit}
-        disabled={saving}
-        className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-accent to-[#FF8F65] text-white rounded-xl font-medium hover:brightness-110 disabled:opacity-50 transition-all shadow-lg shadow-accent/25"
-      >
-        {saving ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Saving...
-          </>
-        ) : (
-          <>
-            <Check className="w-4 h-4" />
-            Save Entry
-          </>
+      <div className="flex gap-3">
+        {onCancel && (
+          <button
+            onClick={onCancel}
+            disabled={saving}
+            className="flex-1 py-3 text-white/60 bg-white/[0.06] border border-white/[0.08] rounded-xl font-medium hover:bg-white/[0.10] disabled:opacity-50 transition-colors"
+          >
+            Cancel
+          </button>
         )}
-      </button>
+        <button
+          onClick={handleSubmit}
+          disabled={saving}
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/[0.10] border border-white/[0.08] text-white rounded-xl font-medium hover:bg-white/[0.16] disabled:opacity-50 transition-colors"
+        >
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Check className="w-4 h-4" />
+              Save Entry
+            </>
+          )}
+        </button>
+      </div>
     </div>
   )
 }
