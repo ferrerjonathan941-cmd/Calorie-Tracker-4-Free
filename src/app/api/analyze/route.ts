@@ -349,7 +349,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Analysis error:', error)
     const message = error instanceof Error ? error.message : ''
-    if (message.includes('429') || message.includes('quota') || message.includes('RESOURCE_EXHAUSTED') || message.includes('did not match the expected pattern')) {
+    if (message.includes('429') || message.includes('quota') || message.includes('RESOURCE_EXHAUSTED')) {
       return NextResponse.json({ error: 'You\'ve run out of free credits — please upgrade your Gemini API plan or try again later' }, { status: 429 })
     }
     return NextResponse.json({ error: 'Failed to analyze food' }, { status: 500 })
