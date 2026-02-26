@@ -5,7 +5,9 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/'
+  const rawNext = searchParams.get('next') ?? '/'
+  // Validate redirect to prevent open redirect attacks
+  const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/'
 
   if (code) {
     const cookieStore = await cookies()
@@ -21,7 +23,8 @@ export async function GET(request: Request) {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, {
                 ...options,
-                maxAge: 60 * 60 * 24 * 400,
+                maxAge: 60 * 60 * 24 * 30,
+                secure: true,
               })
             )
           },

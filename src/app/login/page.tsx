@@ -7,6 +7,22 @@ import { SignInPage } from '@/components/ui/sign-in'
 
 type Mode = 'signin' | 'signup' | 'reset'
 
+const SAFE_AUTH_ERRORS = [
+  'Invalid login credentials',
+  'Email not confirmed',
+  'User already registered',
+  'Password should be at least',
+  'Email rate limit exceeded',
+  'Signups not allowed',
+]
+
+function sanitizeAuthError(message: string): string {
+  if (SAFE_AUTH_ERRORS.some((safe) => message.includes(safe))) {
+    return message
+  }
+  return 'Something went wrong. Please try again.'
+}
+
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=1200&q=80'
 
 const MODE_COPY: Record<Mode, { title: string; description: string; submit: string; footerText: string; footerLink: string }> = {
@@ -58,7 +74,7 @@ export default function LoginPage() {
         redirectTo: `${window.location.origin}/auth/callback`,
       })
       if (error) {
-        setError(error.message)
+        setError(sanitizeAuthError(error.message))
       } else {
         setMessage('Check your email for a password reset link.')
       }
@@ -69,7 +85,7 @@ export default function LoginPage() {
     if (mode === 'signup') {
       const { error } = await supabase.auth.signUp({ email, password })
       if (error) {
-        setError(error.message)
+        setError(sanitizeAuthError(error.message))
       } else {
         setMessage('Check your email to confirm your account.')
       }

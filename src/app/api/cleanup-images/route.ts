@@ -28,7 +28,7 @@ export async function POST() {
     // Extract storage paths from public URLs
     const paths = entries
       .map((e) => {
-        const match = e.image_url?.match(/\/food-photos\/(.+)$/)
+        const match = e.image_url?.match(/\/food-photos\/([^?]+)/)
         return match ? match[1] : null
       })
       .filter((p): p is string => p !== null)

@@ -7,6 +7,11 @@ import { lookupUSDANutrients, formatUSDAContextForPrompt } from '@/lib/search/us
 import type { USDALookupResult } from '@/lib/search/usda'
 import { matchChain, matchItems, buildChainAnalysis } from '@/lib/chain-nutrition'
 import type { IdentifiedFoodItem } from '@/lib/types'
+import { rateLimit } from '@/lib/rate-limit'
+
+// 10 analyses per user per minute
+const RATE_LIMIT = 10
+const RATE_WINDOW_MS = 60_000
 
 export async function POST(request: Request) {
   try {
@@ -15,6 +20,14 @@ export async function POST(request: Request) {
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { success } = rateLimit(`analyze:${user.id}`, RATE_LIMIT, RATE_WINDOW_MS)
+    if (!success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please wait a moment and try again.' },
+        { status: 429 }
+      )
     }
 
     const formData = await request.formData()
@@ -160,11 +173,13 @@ export async function POST(request: Request) {
         }
       }
 
-      const { data: { publicUrl: url } } = supabase.storage
+      // Use signed URL (7-day expiry — images are cleaned up after 7 days)
+      // NOTE: Set the food-photos bucket to PRIVATE in Supabase dashboard
+      const { data: signedData } = await supabase.storage
         .from('food-photos')
-        .getPublicUrl(fileName)
+        .createSignedUrl(fileName, 60 * 60 * 24 * 7)
 
-      publicUrl = url
+      publicUrl = signedData?.signedUrl ?? null
     }
 
     // ─── Chain Nutrition Lookup ───
