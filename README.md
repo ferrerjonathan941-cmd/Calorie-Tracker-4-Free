@@ -27,7 +27,7 @@ Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey), create a
 
 Click the button below. Vercel will auto-create a Supabase project for you (database + auth, no signup required).
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=<!-- REPLACE_REPO_URL -->&env=GEMINI_API_KEY&envDescription=Gemini%20AI%20key%20from%20aistudio.google.com%2Fapikey&envLink=<!-- REPLACE_REPO_URL -->/blob/main/docs/SETUP.md&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22supabase%22%2C%22productSlug%22%3A%22supabase%22%7D%5D)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fferrerjonathan941-cmd%2Fcalorie-tracker&env=GEMINI_API_KEY&envDescription=Gemini%20AI%20key%20from%20aistudio.google.com%2Fapikey&envLink=https%3A%2F%2Fgithub.com%2Fferrerjonathan941-cmd%2Fcalorie-tracker%2Fblob%2Fmain%2Fdocs%2FSETUP.md&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22supabase%22%2C%22productSlug%22%3A%22supabase%22%7D%5D)
 
 The Supabase integration sets your database URL and API keys automatically. The app creates all tables on first visit.
 
@@ -74,7 +74,7 @@ See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for common issues.
 ## Local Development
 
 ```bash
-git clone <!-- REPLACE_REPO_URL -->.git
+git clone https://github.com/ferrerjonathan941-cmd/calorie-tracker.git
 cd calorie-tracker-4-free
 npm install
 npm run setup   # interactive wizard that creates .env.local
