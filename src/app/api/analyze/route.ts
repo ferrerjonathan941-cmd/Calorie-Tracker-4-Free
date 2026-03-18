@@ -8,7 +8,6 @@ import type { USDALookupResult } from '@/lib/search/usda'
 import { matchChain, matchItems, buildChainAnalysis } from '@/lib/chain-nutrition'
 import type { IdentifiedFoodItem } from '@/lib/types'
 import { rateLimit } from '@/lib/rate-limit'
-import { validateImageUpload } from '@/lib/validation'
 import { getGeminiApiKey } from '@/lib/env'
 import { getApiKey } from '@/lib/api-keys'
 
