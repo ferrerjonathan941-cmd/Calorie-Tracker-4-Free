@@ -173,28 +173,62 @@ export default function SetupScreen({ reason, checks }: Props) {
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5 divide-y divide-zinc-800/60">
           {/* ── Step 1: Supabase Connection ──────────────────────────── */}
           <StepRow label="Supabase Connection" passed={supabaseOk}>
-            <p>
-              Your Supabase environment variables are missing. Add them in your hosting
-              provider&apos;s settings:
-            </p>
-            <ul className="mt-2 space-y-1">
-              <li>
-                <code className="bg-zinc-800 px-1.5 py-0.5 rounded text-xs text-zinc-200">NEXT_PUBLIC_SUPABASE_URL</code>
-              </li>
-              <li>
-                <code className="bg-zinc-800 px-1.5 py-0.5 rounded text-xs text-zinc-200">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>
-              </li>
-            </ul>
-            <p className="mt-2 text-zinc-500 text-xs">
-              Find these at{' '}
-              <DashboardLink href="https://supabase.com/dashboard">
-                Supabase Dashboard
-              </DashboardLink>
-              {' '}&rarr; your project &rarr; Settings &rarr; API.
-            </p>
-            <p className="mt-1 text-zinc-500 text-xs">
-              If you deployed via the Vercel &ldquo;Deploy&rdquo; button, these should be set automatically.
-            </p>
+            {geminiOk ? (
+              <>
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+                  <p className="text-amber-400 font-medium text-sm">
+                    Deployed via Vercel? You just need to redeploy.
+                  </p>
+                  <p className="text-zinc-400 text-xs mt-1">
+                    Supabase sets its environment variables <em>after</em> the first build, so the
+                    first deploy always shows this screen. Go to your Vercel dashboard &rarr;{' '}
+                    <strong>Deployments</strong> &rarr; click the <strong>&hellip;</strong> menu on the
+                    latest deployment &rarr; <strong>Redeploy</strong>.
+                  </p>
+                </div>
+                <div className="mt-3 text-zinc-500 text-xs">
+                  <p className="font-medium text-zinc-400">Not using Vercel&apos;s deploy button?</p>
+                  <p className="mt-1">Add these environment variables manually:</p>
+                  <ul className="mt-1 space-y-1">
+                    <li>
+                      <code className="bg-zinc-800 px-1.5 py-0.5 rounded text-xs text-zinc-200">NEXT_PUBLIC_SUPABASE_URL</code>
+                    </li>
+                    <li>
+                      <code className="bg-zinc-800 px-1.5 py-0.5 rounded text-xs text-zinc-200">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>
+                    </li>
+                  </ul>
+                  <p className="mt-1.5">
+                    Find these at{' '}
+                    <DashboardLink href="https://supabase.com/dashboard">
+                      Supabase Dashboard
+                    </DashboardLink>
+                    {' '}&rarr; your project &rarr; Settings &rarr; API.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <p>
+                  Your Supabase environment variables are missing. Add them in your hosting
+                  provider&apos;s settings:
+                </p>
+                <ul className="mt-2 space-y-1">
+                  <li>
+                    <code className="bg-zinc-800 px-1.5 py-0.5 rounded text-xs text-zinc-200">NEXT_PUBLIC_SUPABASE_URL</code>
+                  </li>
+                  <li>
+                    <code className="bg-zinc-800 px-1.5 py-0.5 rounded text-xs text-zinc-200">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>
+                  </li>
+                </ul>
+                <p className="mt-2 text-zinc-500 text-xs">
+                  Find these at{' '}
+                  <DashboardLink href="https://supabase.com/dashboard">
+                    Supabase Dashboard
+                  </DashboardLink>
+                  {' '}&rarr; your project &rarr; Settings &rarr; API.
+                </p>
+              </>
+            )}
           </StepRow>
 
           {/* ── Step 2: Gemini AI ────────────────────────────────────── */}
