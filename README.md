@@ -19,6 +19,11 @@ A free, AI-powered calorie tracker you can deploy in minutes. Snap a photo of yo
 
 ## Get Your Own (Free)
 
+Before you start, create free accounts on these two services (if you don't have them already):
+
+1. **[GitHub](https://github.com/signup)** — needed to copy the project to your account
+2. **[Vercel](https://vercel.com/signup)** — hosts your app for free. **Connect your GitHub account** when signing up.
+
 ### 1. Get a Gemini API Key (~1 minute)
 
 Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey), create a key, and copy it. That's the only key you need to paste manually.
