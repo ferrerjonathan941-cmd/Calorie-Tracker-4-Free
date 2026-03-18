@@ -5,6 +5,9 @@ import Dashboard from './dashboard'
 import { checkSetup } from '@/lib/supabase/check-setup'
 import SetupScreen from '@/components/SetupScreen'
 
+// Never statically cache this page — env vars may be set after the first build
+export const dynamic = 'force-dynamic'
+
 export default async function HomePage() {
   // Check if database is configured before anything else
   const setupResult = await checkSetup()
