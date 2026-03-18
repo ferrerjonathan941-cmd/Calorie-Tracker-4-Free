@@ -1,9 +1,20 @@
 import { GoogleGenerativeAI, Part } from '@google/generative-ai'
 import { FoodItem, FoodAnalysis, IdentifiedFoodItem } from '@/lib/types'
+import { getGeminiApiKey } from '@/lib/env'
 
 export type { FoodItem, FoodAnalysis }
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+let _genAI: GoogleGenerativeAI | null = null
+function getGenAI() {
+  if (!_genAI) {
+    const apiKey = getGeminiApiKey()
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY is not configured')
+    }
+    _genAI = new GoogleGenerativeAI(apiKey)
+  }
+  return _genAI
+}
 
 const EXPERT_SYSTEM_INSTRUCTION = `You are a Registered Dietitian with 15 years of clinical experience and deep expertise in the USDA FoodData Central database.
 
@@ -41,7 +52,7 @@ export async function identifyFoodItems(
   base64Image: string,
   mimeType: string
 ): Promise<FoodIdentification> {
-  const model = genAI.getGenerativeModel({
+  const model = getGenAI().getGenerativeModel({
     model: 'gemini-2.5-flash',
     systemInstruction: EXPERT_SYSTEM_INSTRUCTION,
     generationConfig: {
@@ -112,7 +123,7 @@ export async function identifyMissedFoodItems(
   existingItemNames: string[],
   userHint?: string
 ): Promise<{ items: IdentifiedFoodItem[] }> {
-  const model = genAI.getGenerativeModel({
+  const model = getGenAI().getGenerativeModel({
     model: 'gemini-2.5-flash',
     systemInstruction: EXPERT_SYSTEM_INSTRUCTION,
     generationConfig: {
@@ -272,7 +283,7 @@ ${JSON_STRUCTURE}`
 }
 
 export async function analyzeFood(options: AnalyzeFoodOptions): Promise<FoodAnalysis> {
-  const model = genAI.getGenerativeModel({
+  const model = getGenAI().getGenerativeModel({
     model: 'gemini-2.5-flash',
     systemInstruction: EXPERT_SYSTEM_INSTRUCTION,
     generationConfig: {

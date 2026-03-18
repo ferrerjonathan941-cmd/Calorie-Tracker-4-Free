@@ -2,8 +2,16 @@ import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Dashboard from './dashboard'
+import { checkSetup } from '@/lib/supabase/check-setup'
+import SetupScreen from '@/components/SetupScreen'
 
 export default async function HomePage() {
+  // Check if database is configured before anything else
+  const setupResult = await checkSetup()
+  if (!setupResult.ok) {
+    return <SetupScreen reason={setupResult.reason} checks={setupResult.checks} />
+  }
+
   const supabase = await createClient()
   const { data: { session } } = await supabase.auth.getSession()
   const user = session?.user

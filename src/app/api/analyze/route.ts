@@ -8,12 +8,21 @@ import type { USDALookupResult } from '@/lib/search/usda'
 import { matchChain, matchItems, buildChainAnalysis } from '@/lib/chain-nutrition'
 import type { IdentifiedFoodItem } from '@/lib/types'
 import { rateLimit } from '@/lib/rate-limit'
+import { validateImageUpload } from '@/lib/validation'
+import { getGeminiApiKey } from '@/lib/env'
 
 // 10 analyses per user per minute
 const RATE_LIMIT = 10
 const RATE_WINDOW_MS = 60_000
 
 export async function POST(request: Request) {
+  if (!getGeminiApiKey()) {
+    return NextResponse.json(
+      { error: 'Food scanning is not configured. Please add your GEMINI_API_KEY in your environment variables.' },
+      { status: 503 }
+    )
+  }
+
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()

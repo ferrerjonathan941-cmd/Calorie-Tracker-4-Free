@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calorie Tracker — Get Your API Keys</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #09090b; color: #e4e4e7; line-height: 1.6;
+      padding: 2rem; max-width: 720px; margin: 0 auto;
+    }
+    h1 { font-size: 1.75rem; margin-bottom: 0.5rem; color: #fff; }
+    .subtitle { color: #71717a; margin-bottom: 2rem; }
+    .card {
+      background: #18181b; border: 1px solid #27272a; border-radius: 12px;
+      padding: 1.5rem; margin-bottom: 1rem;
+    }
+    .card h2 { font-size: 1.1rem; color: #fff; margin-bottom: 0.75rem; }
+    .card .step { color: #a1a1aa; font-size: 0.9rem; margin-bottom: 0.25rem; }
+    .card a {
+      color: #60a5fa; text-decoration: none;
+      word-break: break-all;
+    }
+    .card a:hover { text-decoration: underline; }
+    .badge {
+      display: inline-block; font-size: 0.7rem; font-weight: 600;
+      padding: 2px 8px; border-radius: 9999px; margin-left: 0.5rem;
+      vertical-align: middle;
+    }
+    .required { background: #7f1d1d; color: #fca5a5; }
+    .optional { background: #1c1917; color: #a8a29e; }
+    .checklist { list-style: none; padding: 0; margin-top: 0.75rem; }
+    .checklist li {
+      padding: 0.35rem 0; padding-left: 1.5rem; position: relative;
+      color: #d4d4d8; font-size: 0.9rem;
+    }
+    .checklist li::before {
+      content: ''; position: absolute; left: 0; top: 0.6rem;
+      width: 14px; height: 14px; border: 2px solid #3f3f46;
+      border-radius: 3px;
+    }
+    .note {
+      background: #1a1a2e; border: 1px solid #2d2d5e; border-radius: 8px;
+      padding: 1rem; margin-top: 2rem; font-size: 0.85rem; color: #a5b4fc;
+    }
+    .deploy-btn {
+      display: inline-block; margin-top: 2rem; padding: 0.75rem 1.5rem;
+      background: #fff; color: #000; border-radius: 8px;
+      font-weight: 600; text-decoration: none; font-size: 0.95rem;
+    }
+    .deploy-btn:hover { background: #e4e4e7; }
+    .blocked-note {
+      background: #1c1917; border: 1px solid #44403c; border-radius: 8px;
+      padding: 1rem; margin-top: 1rem; font-size: 0.85rem; color: #d6d3d1;
+      display: none;
+    }
+    footer { margin-top: 3rem; color: #52525b; font-size: 0.8rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>Get Your API Keys</h1>
+  <p class="subtitle">Open each service, copy your keys, then deploy. Takes ~5 minutes.</p>
+
+  <div class="card">
+    <h2>1. Supabase <span class="badge required">Required</span></h2>
+    <p class="step">Sign up or log in, create a new project, then go to Project Settings &rarr; API.</p>
+    <a href="https://supabase.com/dashboard" target="_blank" rel="noopener">supabase.com/dashboard</a>
+    <ul class="checklist">
+      <li>Project URL &rarr; <code>NEXT_PUBLIC_SUPABASE_URL</code></li>
+      <li>anon / public key &rarr; <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></li>
+      <li>Settings &rarr; Database &rarr; Connection string (URI) &rarr; <code>DATABASE_URL</code></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>2. Google AI Studio (Gemini) <span class="badge required">Required</span></h2>
+    <p class="step">Click "Get API Key" &rarr; Create key.</p>
+    <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>
+    <ul class="checklist">
+      <li>API Key &rarr; <code>GEMINI_API_KEY</code></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>3. USDA FoodData Central <span class="badge optional">Optional</span></h2>
+    <p class="step">Sign up and request an API key. Improves nutrition accuracy.</p>
+    <a href="https://fdc.nal.usda.gov/api-key-signup" target="_blank" rel="noopener">fdc.nal.usda.gov/api-key-signup</a>
+    <ul class="checklist">
+      <li>API Key &rarr; <code>USDA_API_KEY</code></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>4. Brave Search <span class="badge optional">Optional</span></h2>
+    <p class="step">Sign up for the free tier (2,000 queries/mo). Helps with restaurant menu lookups.</p>
+    <a href="https://brave.com/search/api/" target="_blank" rel="noopener">brave.com/search/api</a>
+    <ul class="checklist">
+      <li>API Key &rarr; <code>BRAVE_API_KEY</code></li>
+    </ul>
+  </div>
+
+  <div class="note">
+    <strong>Popup blocked?</strong> Click the links above manually to open each service.
+  </div>
+
+  <div class="note" style="display: block; background: #0a1a0a; border-color: #1a3a1a; color: #86efac;">
+    <strong>Using Vercel?</strong> The Deploy button auto-creates your Supabase project &mdash; you only need to paste your Gemini key. The Supabase keys above are only needed for manual/self-hosted setups.
+  </div>
+
+  <div style="text-align: center;">
+    <a class="deploy-btn" href="<!-- REPLACE_REPO_URL -->" target="_blank" rel="noopener">
+      Deploy to Vercel &rarr;
+    </a>
+  </div>
+
+  <footer>
+    <p>Calorie Tracker 4 Free &mdash; open source &amp; free forever</p>
+  </footer>
+
+  <script>
+    // Try to open the service tabs automatically
+    const urls = [
+      'https://supabase.com/dashboard',
+      'https://aistudio.google.com/apikey',
+      'https://fdc.nal.usda.gov/api-key-signup',
+      'https://brave.com/search/api/'
+    ];
+    let blocked = false;
+    urls.forEach(url => {
+      const w = window.open(url, '_blank');
+      if (!w) blocked = true;
+    });
+    if (blocked) {
+      const note = document.querySelector('.note');
+      if (note) {
+        note.innerHTML = '<strong>Popups were blocked.</strong> Click each link above to open the service manually.';
+        note.style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -49,6 +49,38 @@ const MODE_COPY: Record<Mode, { title: string; description: string; submit: stri
   },
 }
 
+/** Extract the Supabase project ref from the public URL for building dashboard links */
+function getProjectRef(): string | undefined {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  return url?.match(/^https:\/\/([^.]+)\.supabase/)?.[1]
+}
+
+/** Check if an auth error is likely caused by auth provider misconfiguration */
+function isAuthConfigError(errorMessage: string): boolean {
+  const patterns = [
+    'email logins are disabled',
+    'signups not allowed',
+    'provider is not enabled',
+    'email provider is disabled',
+    'new signups are disabled',
+    'otp_disabled',
+  ]
+  const lower = errorMessage.toLowerCase()
+  return patterns.some(p => lower.includes(p))
+}
+
+/** Check if an auth error is likely a redirect URL issue */
+function isRedirectError(errorMessage: string): boolean {
+  const patterns = [
+    'redirect',
+    'not allowed',
+    'invalid redirect',
+    'redirect_uri',
+  ]
+  const lower = errorMessage.toLowerCase()
+  return patterns.some(p => lower.includes(p))
+}
+
 export default function LoginPage() {
   const [mode, setMode] = useState<Mode>('signin')
   const [loading, setLoading] = useState(false)
@@ -117,12 +149,48 @@ export default function LoginPage() {
     setMode('reset')
   }
 
+  // Build contextual help for auth errors
+  const ref = getProjectRef()
+  const authProvidersUrl = ref
+    ? `https://supabase.com/dashboard/project/${ref}/auth/providers`
+    : 'https://supabase.com/dashboard'
+  const urlConfigUrl = ref
+    ? `https://supabase.com/dashboard/project/${ref}/auth/url-configuration`
+    : 'https://supabase.com/dashboard'
+
+  let authHelpNode: React.ReactNode = null
+  if (error && isAuthConfigError(error)) {
+    authHelpNode = (
+      <span className="block mt-3 text-sm text-zinc-400 font-normal leading-relaxed">
+        Email sign-in may not be enabled yet.{' '}
+        <a href={authProvidersUrl} target="_blank" rel="noopener noreferrer" className="text-[#7FFFD4] underline underline-offset-2">
+          Open Auth Providers
+        </a>
+        {' '}in Supabase and toggle <strong className="text-zinc-200">Email</strong> on.
+      </span>
+    )
+  } else if (error && isRedirectError(error)) {
+    authHelpNode = (
+      <span className="block mt-3 text-sm text-zinc-400 font-normal leading-relaxed">
+        Your app&apos;s URL may need to be added to the allowed redirect list.{' '}
+        <a href={urlConfigUrl} target="_blank" rel="noopener noreferrer" className="text-[#7FFFD4] underline underline-offset-2">
+          Open URL Configuration
+        </a>
+        {' '}and add:{' '}
+        <code className="bg-zinc-800 px-1.5 py-0.5 rounded text-xs">{window.location.origin}/auth/callback</code>
+      </span>
+    )
+  }
+
   const titleNode = (
     <span>
       {loading ? (
         <span className="font-light tracking-tighter">Loading…</span>
       ) : error ? (
-        <span className="text-red-400 text-2xl font-normal">{error}</span>
+        <span>
+          <span className="text-red-400 text-2xl font-normal">{error}</span>
+          {authHelpNode}
+        </span>
       ) : message ? (
         <span className="text-green-400 text-2xl font-normal">{message}</span>
       ) : (

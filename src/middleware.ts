@@ -1,14 +1,24 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Inline env var resolution for middleware (can't use @/lib/env in edge runtime easily)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)!
+
 export async function middleware(request: NextRequest) {
+  // If setup isn't complete, skip auth — let the page render the setup wizard
+  const geminiKey = process.env.GEMINI_API_KEY
+  if (!supabaseUrl || !supabaseAnonKey || !geminiKey) {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -39,7 +49,7 @@ export async function middleware(request: NextRequest) {
   const user = session?.user
 
   // Allow public routes
-  const publicPaths = ['/login', '/auth/callback']
+  const publicPaths = ['/login', '/auth/callback', '/api/setup']
   const isPublic = publicPaths.some((path) => request.nextUrl.pathname.startsWith(path))
 
   // If no session but auth cookies exist, the user was previously signed in.

@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Calorie Tracker 4 Free
 
-## Getting Started
+A free, AI-powered calorie tracker you can deploy in minutes. Snap a photo of your meal, and Gemini AI identifies every item with calories and macros. Install it as a PWA on your phone for a native app experience.
 
-First, run the development server:
+<!-- TODO: Add demo screenshot -->
+<!-- ![Demo](docs/demo.png) -->
+
+## Features
+
+- **AI Food Scanning** - Take a photo or describe your meal; Gemini 2.5 Flash identifies items and estimates nutrition
+- **USDA-Verified Data** - Cross-references USDA FoodData Central for accurate calorie and macro counts
+- **Chain Restaurant Support** - Recognizes menus from popular chains (McDonald's, Chipotle, etc.) with official nutrition data
+- **Draft & Edit** - Review AI results before saving; adjust portions, add missed items, or remove extras
+- **Saved Meals** - Save frequent meals for one-tap logging
+- **Daily Dashboard** - Visual breakdown of calories, protein, carbs, and fat with meal-by-meal history
+- **PWA** - Installable on iOS, Android, and desktop; works offline for viewing past entries
+- **Auto-Setup** - Database tables are created automatically on first deploy (or paste one SQL file)
+- **100% Free** - All services used have generous free tiers
+
+## Get Your Own (Free)
+
+### 1. Get a Gemini API Key (~1 minute)
+
+Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey), create a key, and copy it. That's the only key you need to paste manually.
+
+### 2. Deploy to Vercel (~2 minutes)
+
+Click the button below. Vercel will auto-create a Supabase project for you (database + auth, no signup required).
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=<!-- REPLACE_REPO_URL -->&env=GEMINI_API_KEY&envDescription=Gemini%20AI%20key%20from%20aistudio.google.com%2Fapikey&envLink=<!-- REPLACE_REPO_URL -->/blob/main/docs/SETUP.md&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22supabase%22%2C%22productSlug%22%3A%22supabase%22%7D%5D)
+
+The Supabase integration sets your database URL and API keys automatically. The app creates all tables on first visit.
+
+> **Not using Vercel?** See [docs/SETUP.md](docs/SETUP.md) for manual setup with any host.
+
+### 3. Install on Your Phone
+
+Open your deployed URL in Safari (iOS) or Chrome (Android) and tap "Add to Home Screen" for a native app experience.
+
+### Optional: Improve Accuracy
+
+| Service | Env Var | What It Does | Cost |
+|---------|---------|-------------|------|
+| USDA FoodData Central | `USDA_API_KEY` | Cross-references USDA nutrition data | Free |
+| Brave Search | `BRAVE_API_KEY` | Looks up restaurant menu nutrition | Free (2k queries/mo) |
+
+Add these in Vercel under **Settings > Environment Variables** if you want more accurate results.
+
+---
+
+## Manual Database Setup
+
+If auto-setup doesn't work (e.g. you didn't add `DATABASE_URL`):
+
+1. Open your Supabase project's **SQL Editor**
+2. Copy the contents of [`supabase-setup.sql`](supabase-setup.sql)
+3. Paste and run
+4. Reload the app
+
+See [docs/SETUP.md](docs/SETUP.md) for a detailed walkthrough.
+
+## Troubleshooting
+
+See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for common issues.
+
+## Tech Stack
+
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router, React 19)
+- **Database**: [Supabase](https://supabase.com/) (Postgres + Auth + Storage)
+- **AI**: [Gemini 2.5 Flash](https://ai.google.dev/) via Google AI SDK
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
+- **Deployment**: [Vercel](https://vercel.com/)
+
+## Local Development
 
 ```bash
+git clone <!-- REPLACE_REPO_URL -->.git
+cd calorie-tracker-4-free
+npm install
+npm run setup   # interactive wizard that creates .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Contributing
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Contributions are welcome! Please open an issue first to discuss what you'd like to change.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## License
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+[MIT](LICENSE)
