@@ -27,7 +27,7 @@ Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey), create a
 
 ### 2. Deploy to Vercel (~2 minutes)
 
-Click the button below. Vercel will auto-create a Supabase project for you (database + auth, no signup required).
+Click the button below. Vercel will ask for a repository name — you can leave the default and click **Create**. On the next page, click **Add** next to Supabase (this creates your free database automatically), then paste your Gemini key and hit **Deploy**.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fferrerjonathan941-cmd%2Fcalorie-tracker&env=GEMINI_API_KEY&envDescription=Gemini%20AI%20key%20from%20aistudio.google.com%2Fapikey&envLink=https%3A%2F%2Fgithub.com%2Fferrerjonathan941-cmd%2Fcalorie-tracker%2Fblob%2Fmain%2Fdocs%2FSETUP.md&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22supabase%22%2C%22productSlug%22%3A%22supabase%22%7D%5D)
 
