@@ -10,6 +10,7 @@ import type { IdentifiedFoodItem } from '@/lib/types'
 import { rateLimit } from '@/lib/rate-limit'
 import { validateImageUpload } from '@/lib/validation'
 import { getGeminiApiKey } from '@/lib/env'
+import { getApiKey } from '@/lib/api-keys'
 
 // 10 analyses per user per minute
 const RATE_LIMIT = 10
@@ -30,6 +31,12 @@ export async function POST(request: Request) {
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Resolve optional API keys (DB first, then env var fallback)
+    const [usdaApiKey, braveApiKey] = await Promise.all([
+      getApiKey('usda_api_key', user.id),
+      getApiKey('brave_api_key', user.id),
+    ])
 
     const { success } = rateLimit(`analyze:${user.id}`, RATE_LIMIT, RATE_WINDOW_MS)
     if (!success) {
@@ -71,8 +78,8 @@ export async function POST(request: Request) {
 
         // USDA + Brave parallel lookup for new items only
         const [usdaResult, braveContexts] = await Promise.all([
-          lookupUSDANutrients(newItems),
-          searchNutritionFacts(newItems.map((i) => i.name).join(', ')),
+          lookupUSDANutrients(newItems, usdaApiKey),
+          searchNutritionFacts(newItems.map((i) => i.name).join(', '), braveApiKey),
         ])
         const usdaContext = formatUSDAContextForPrompt(newItems, usdaResult)
         const searchContext = formatSearchContextForPrompt(braveContexts)
@@ -244,7 +251,7 @@ export async function POST(request: Request) {
         if (result.matchedItems.length > 0) {
           // Partial match: use AI only for unmatched items, then merge
           let searchContext = ''
-          const contexts = await searchNutritionFacts(result.unmatchedItemNames.join(', '))
+          const contexts = await searchNutritionFacts(result.unmatchedItemNames.join(', '), braveApiKey)
           searchContext = formatSearchContextForPrompt(contexts)
 
           const aiAnalysis = await analyzeFood({
@@ -307,15 +314,15 @@ export async function POST(request: Request) {
     if (identifiedItems.length > 0) {
       // PARALLEL: USDA + Brave lookups simultaneously
       const [usdaResult, braveContexts] = await Promise.all([
-        lookupUSDANutrients(identifiedItems),
-        searchNutritionFacts(identifiedItems.map((i) => i.name).join(', ')),
+        lookupUSDANutrients(identifiedItems, usdaApiKey),
+        searchNutritionFacts(identifiedItems.map((i) => i.name).join(', '), braveApiKey),
       ])
       usdaMap = usdaResult
       usdaContext = formatUSDAContextForPrompt(identifiedItems, usdaMap)
       searchContext = formatSearchContextForPrompt(braveContexts)
     } else if (description.trim()) {
       // Text-only or image+description: Brave only (no identifiedItems to look up)
-      const contexts = await searchNutritionFacts(description)
+      const contexts = await searchNutritionFacts(description, braveApiKey)
       searchContext = formatSearchContextForPrompt(contexts)
     }
 

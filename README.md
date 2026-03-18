@@ -44,7 +44,7 @@ Open your deployed URL in Safari (iOS) or Chrome (Android) and tap "Add to Home 
 | USDA FoodData Central | `USDA_API_KEY` | Cross-references USDA nutrition data | Free |
 | Brave Search | `BRAVE_API_KEY` | Looks up restaurant menu nutrition | Free (2k queries/mo) |
 
-Add these in Vercel under **Settings > Environment Variables** if you want more accurate results.
+Add these in the app under **Settings > API Keys** after you log in — no environment variables needed. (You can also set them as env vars if you prefer.)
 
 ---
 

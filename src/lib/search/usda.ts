@@ -64,8 +64,8 @@ function selectBestMatch(foods: USDAFoodItem[], query: string): USDAFoodItem | n
   return scored[0]?.food ?? null
 }
 
-export async function lookupUSDANutrient(foodName: string): Promise<USDALookupResult> {
-  const apiKey = process.env.USDA_API_KEY
+export async function lookupUSDANutrient(foodName: string, overrideApiKey?: string): Promise<USDALookupResult> {
+  const apiKey = overrideApiKey ?? process.env.USDA_API_KEY
   if (!apiKey) {
     return { query: foodName, match: null, confidence: 'none' }
   }
@@ -120,9 +120,10 @@ export async function lookupUSDANutrient(foodName: string): Promise<USDALookupRe
 }
 
 export async function lookupUSDANutrients(
-  items: IdentifiedFoodItem[]
+  items: IdentifiedFoodItem[],
+  overrideApiKey?: string
 ): Promise<Map<string, USDALookupResult>> {
-  const results = await Promise.all(items.map((item) => lookupUSDANutrient(item.name)))
+  const results = await Promise.all(items.map((item) => lookupUSDANutrient(item.name, overrideApiKey)))
   const map = new Map<string, USDALookupResult>()
   items.forEach((item, i) => map.set(item.name, results[i]))
   return map

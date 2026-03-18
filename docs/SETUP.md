@@ -39,6 +39,8 @@ These improve nutrition accuracy but are not required:
 - **USDA**: [fdc.nal.usda.gov/api-key-signup](https://fdc.nal.usda.gov/api-key-signup) — sign up and get your key via email
 - **Brave Search**: [brave.com/search/api](https://brave.com/search/api/) — sign up for the free tier
 
+> **Tip:** You can paste these keys directly into the app's **Settings > API Keys** page after your first login — no environment variables needed.
+
 ## Step 5: Deploy
 
 ### Option A: Deploy to Vercel (Recommended)

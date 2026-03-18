@@ -67,3 +67,20 @@ CREATE POLICY "Users can view own photos" ON storage.objects
   FOR SELECT USING (bucket_id = 'food-photos' AND (storage.foldername(name))[1] = auth.uid()::text);
 CREATE POLICY "Users can delete own photos" ON storage.objects
   FOR DELETE USING (bucket_id = 'food-photos' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+-- 5. User settings (for optional API keys stored in-app)
+CREATE TABLE IF NOT EXISTS user_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  setting_key TEXT NOT NULL,
+  setting_value TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(user_id, setting_key)
+);
+CREATE INDEX IF NOT EXISTS idx_user_settings_user ON user_settings (user_id);
+ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view own settings" ON user_settings FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own settings" ON user_settings FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own settings" ON user_settings FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own settings" ON user_settings FOR DELETE USING (auth.uid() = user_id);

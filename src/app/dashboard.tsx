@@ -14,6 +14,7 @@ import MonthCalendarView from '@/components/MonthCalendarView'
 import AllTimeSummaryView from '@/components/AllTimeSummaryView'
 import SwipeContainer from '@/components/SwipeContainer'
 import PageIndicator from '@/components/PageIndicator'
+import ApiKeySettings from '@/components/ApiKeySettings'
 import { FoodEntry, DailySummary } from '@/lib/types'
 
 const DotScreenShader = dynamic(
@@ -351,6 +352,8 @@ export default function Dashboard({ initialEntries, userEmail }: DashboardProps)
                 <p className="text-xs text-text-dim">Account</p>
                 <p className="text-sm text-white mt-1">{userEmail}</p>
               </div>
+
+              <ApiKeySettings />
             </div>
           </div>
         </SwipeContainer>

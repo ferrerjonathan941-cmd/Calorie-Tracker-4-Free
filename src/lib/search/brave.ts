@@ -51,9 +51,10 @@ async function braveWebSearch(
 }
 
 export async function searchNutritionFacts(
-  description: string
+  description: string,
+  overrideApiKey?: string
 ): Promise<NutritionSearchContext[]> {
-  const apiKey = process.env.BRAVE_API_KEY
+  const apiKey = overrideApiKey ?? process.env.BRAVE_API_KEY
   if (!apiKey) {
     return []
   }
