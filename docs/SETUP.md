@@ -49,21 +49,23 @@ These improve nutrition accuracy but are not required:
 4. Click **Deploy**
 5. Wait for the build to finish (~2 minutes)
 6. Visit your URL — the database tables are created automatically
+7. **Important:** Add your redirect URL (see Step 5b below) or login won't work
 
 ### Option B: Run Locally
 
 ```bash
-git clone <repo-url>
-cd calorie-tracker-4-free
+git clone https://github.com/ferrerjonathan941-cmd/calorie-tracker.git
+cd calorie-tracker
 npm install
-cp .env.example .env.local
-# Edit .env.local with your keys
+npm run setup   # interactive wizard that creates .env.local
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Step 6: Enable Authentication
+## Step 5b: Configure Authentication (Required)
+
+> **Don't skip this** — login will silently fail without redirect URLs configured.
 
 1. In your Supabase dashboard, go to **Authentication > Providers**
 2. Enable at least one sign-in method:
