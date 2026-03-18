@@ -54,8 +54,8 @@ These improve nutrition accuracy but are not required:
 ### Option B: Run Locally
 
 ```bash
-git clone https://github.com/ferrerjonathan941-cmd/calorie-tracker.git
-cd calorie-tracker
+git clone https://github.com/ferrerjonathan941-cmd/Calorie-Tracker-4-Free.git
+cd Calorie-Tracker-4-Free
 npm install
 npm run setup   # interactive wizard that creates .env.local
 npm run dev

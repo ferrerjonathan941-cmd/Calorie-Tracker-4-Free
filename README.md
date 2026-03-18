@@ -74,8 +74,8 @@ See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for common issues.
 ## Local Development
 
 ```bash
-git clone https://github.com/ferrerjonathan941-cmd/calorie-tracker.git
-cd calorie-tracker
+git clone https://github.com/ferrerjonathan941-cmd/Calorie-Tracker-4-Free.git
+cd Calorie-Tracker-4-Free
 npm install
 npm run setup   # interactive wizard that creates .env.local
 npm run dev
