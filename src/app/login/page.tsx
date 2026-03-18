@@ -51,7 +51,7 @@ const MODE_COPY: Record<Mode, { title: string; description: string; submit: stri
 
 /** Extract the Supabase project ref from the public URL for building dashboard links */
 function getProjectRef(): string | undefined {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const url = process.env['NEXT_PUBLIC_SUPABASE_URL'] || process.env['SUPABASE_URL']
   return url?.match(/^https:\/\/([^.]+)\.supabase/)?.[1]
 }
 
